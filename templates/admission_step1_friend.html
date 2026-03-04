@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Admission - Step 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+
+<body>
+  <div class="card admission-card">
+    <h2>Online Admission</h2>
+    <p class="subtitle">Step 1 of 3 - Student & Academic Details</p>
+
+    <div class="progress-bar">
+      <div class="progress-fill step-1"></div>
+    </div>
+
+    <form method="post">
+      <!-- ================= STUDENT PERSONAL DETAILS ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Student Personal Details</h3>
+
+        <div class="form-grid two-col">
+          <input name="student_name" placeholder="Student Full Name" required>
+
+          <div>
+            <input type="tel" name="student_mobile" id="student_mobile" placeholder="Mobile Number" maxlength="10" required oninput="validateMobile()">
+            <small id="mobile_msg"></small>
+          </div>
+
+          <div>
+            <input type="email" name="student_email" id="student_email" placeholder="Gmail Address" required oninput="validateEmail()">
+            <small id="email_msg"></small>
+          </div>
+
+          <input type="date" name="dob" required>
+
+          <select name="gender" required>
+            <option value="">Select Gender</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+
+          <select name="indian_nationality" required>
+            <option value="">Indian Nationality</option>
+            <option value="YES">Yes</option>
+            <option value="NO">No</option>
+          </select>
+
+          <input name="religion" placeholder="Religion">
+
+          <select name="caste_category" required>
+            <option value="">Caste Category</option>
+            <option>Category-1</option>
+            <option>SC</option>
+            <option>ST</option>
+            <option>2A</option>
+            <option>2B</option>
+            <option>3A</option>
+            <option>3B</option>
+            <option>GEN</option>
+            <option>OBC</option>
+          </select>
+
+          <select name="alloted_category" required>
+            <option value="">Alloted Category</option>
+            <option>1G</option>
+            <option>SCG</option>
+            <option>STG</option>
+            <option>2AG</option>
+            <option>2BG</option>
+            <option>3AG</option>
+            <option>3BG</option>
+            <option>GM</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ================= ACADEMIC DETAILS ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Academic Details</h3>
+
+        <div class="form-grid two-col">
+          <select name="qualifying_exam" id="qualifying_exam" required onchange="toggleAcademicFields()">
+            <option value="">Qualifying Exam</option>
+            <option value="SSLC">SSLC</option>
+            <option value="CBSE">CBSE</option>
+            <option value="ICSE">ICSE</option>
+            <option value="PUC">PUC</option>
+            <option value="ITI">ITI</option>
+          </select>
+
+          <input name="year_of_passing" placeholder="Year of Passing" required>
+          <input name="register_number" placeholder="Register Number" required>
+        </div>
+
+        <div id="school-marks" class="form-grid two-col" style="display:none;">
+          <input name="maths_marks" placeholder="Maths Marks">
+          <input name="science_marks" placeholder="Science Marks">
+          <input name="total_marks" placeholder="Total Marks">
+          <input name="marks_obtained" placeholder="Marks Obtained">
+          <input name="percentage" placeholder="Percentage">
+        </div>
+        <div id="commonMarks" class="form-grid two-col" style="display:none;">
+          <input type="number" name="total_marks" placeholder="Total Marks">
+          <input type="number" name="marks_obtained" placeholder="Marks Obtained">
+          <input type="number" name="percentage" placeholder="Percentage">
+        </div>
+      </div>
+
+      <!-- ================= ADMISSION DETAILS ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Admission Details</h3>
+
+        <div class="form-grid two-col">
+          <select name="admission_quota" required>
+            <option value="">Admission Quota</option>
+            <option>Government</option>
+            <option>SNQ</option>
+          </select>
+
+          <select name="branch" required>
+            <option value="">Select Branch</option>
+            <option>Automobile Engineering</option>
+            <option>Computer Science and Engineering</option>
+            <option>Electronics and Communication Engineering</option>
+            <option>Mechanical Engineering</option>
+          </select>
+
+          <input type="password" name="password" id="password" class="preserve-case" placeholder="Create Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary">
+          Next ->
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script>
+    document.addEventListener("input", function (e) {
+      if (e.target.name === "student_name" || e.target.name === "religion") {
+        e.target.value = e.target.value.toUpperCase();
+      }
+
+      if (e.target.matches('input[name="password"]')) {
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.target.matches('input[name="password"]')) {
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    function toggleAcademicFields() {
+      const exam = document.getElementById("qualifying_exam").value;
+      const schoolBlock = document.getElementById("school-marks");
+      const commonBlock = document.getElementById("commonMarks");
+      const isSchoolExam = (exam === "SSLC" || exam === "PUC");
+      const showCommon = !!exam && !isSchoolExam;
+
+      schoolBlock.style.display = isSchoolExam ? "grid" : "none";
+      commonBlock.style.display = showCommon ? "grid" : "none";
+
+      schoolBlock.querySelectorAll("input,select,textarea").forEach((el) => {
+        el.disabled = !isSchoolExam;
+      });
+      commonBlock.querySelectorAll("input,select,textarea").forEach((el) => {
+        el.disabled = !showCommon;
+      });
+    }
+
+    function validateMobile() {
+      const input = document.getElementById("student_mobile");
+      const msg = document.getElementById("mobile_msg");
+
+      input.value = input.value.replace(/[^0-9]/g, "");
+
+      if (input.value.length < 10) {
+        msg.textContent = "Invalid mobile number";
+        msg.style.color = "red";
+      } else {
+        msg.textContent = "Valid mobile number";
+        msg.style.color = "green";
+      }
+    }
+
+    function validateEmail() {
+      const email = document.getElementById("student_email").value.trim();
+      const msg = document.getElementById("email_msg");
+
+      const pattern = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+
+      if (pattern.test(email)) {
+        msg.style.color = "green";
+        msg.textContent = "Valid Gmail address";
+      } else {
+        msg.style.color = "red";
+        msg.textContent = "Invalid Gmail address";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", toggleAcademicFields);
+
+  </script>
+</body>
+
+</html>

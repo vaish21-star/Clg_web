@@ -61,10 +61,14 @@
               <th>Gender</th>
               <th>DOB</th>
               <th>Mobile no</th>
+              <th>Email ID</th>
+              <th>SSP ID</th>
+              <th>APAAR ID</th>
               <th>Caste</th>
               <th>Alloted Category</th>
+              <th>Status</th>
               <th>PHOTO</th>
-              <th class="no-print">Edit</th>
+              <th class="no-print">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -78,8 +82,12 @@
                 <td>{{ s.gender }}</td>
                 <td>{{ s.dob }}</td>
                 <td>{{ s.mobile }}</td>
+                <td>{{ s.student_email }}</td>
+                <td>{{ s.ssp_id }}</td>
+                <td>{{ s.apaar_id }}</td>
                 <td>{{ s.caste_category }}</td>
                 <td>{{ s.alloted_category }}</td>
+                <td>{{ s.status }}</td>
                 <td>
                   <div class="photo-slot">
                     {% if s.photo_file %}
@@ -89,12 +97,16 @@
                   </div>
                 </td>
                 <td class="no-print">
+                  <a class="table-link" target="_blank" href="/admin/student/{{ s.admission_id }}">Print</a>
+                  |
+                  <a class="table-link" href="/admin/student/{{ s.admission_id }}/admission-pdf">PDF</a>
+                  |
                   <a class="edit-employee-link" href="/admin/student-details/edit/{{ s.admission_id }}" title="Edit Student" aria-label="Edit Student">&#9998;</a>
                 </td>
               </tr>
             {% else %}
               <tr>
-                <td colspan="12">No student records found.</td>
+                <td colspan="16">No student records found.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -103,6 +115,7 @@
     </div>
     <div class="table-actions no-print">
       <button type="button" class="table-btn" onclick="window.print()">Print / Save PDF</button>
+      <a class="table-btn" href="/admin/student-details/pdf?q={{ filters.q }}&status={{ filters.status }}&branch={{ filters.branch }}">Download All Students PDF</a>
     </div>
   </div>
 </body>

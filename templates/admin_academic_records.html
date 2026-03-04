@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Academic Records | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+  <div class="card applications-page">
+    <h2>Academic Records</h2>
+    <p class="subtitle">Add subjects, attendance, internal and external marks</p>
+
+    {% if msg %}
+      <div style="background:#eef4ff;border:1px solid #c7d7f7;color:#1d3e73;padding:10px;border-radius:8px;margin-bottom:12px;">
+        {{ msg }}
+      </div>
+    {% endif %}
+
+    <form method="get" action="/admin/academic-records" class="applications-filters no-print">
+      <input name="admission_id" value="{{ q }}" placeholder="Enter Admission ID">
+      <button type="submit" class="table-btn">Load Student</button>
+    </form>
+
+    {% if student %}
+      <div style="margin:10px 0 16px;padding:10px;border:1px solid #d5e1f7;background:#f7fbff;border-radius:8px;color:#24385f;">
+        <b>{{ student.student_name }}</b> ({{ student.admission_id }}) - {{ student.branch }}
+      </div>
+
+      <div class="applications-filters" style="grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:10px;">
+        <form method="post">
+          <input type="hidden" name="action" value="subject">
+          <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
+          <input name="semester_no" type="number" min="1" max="6" placeholder="Sem" required>
+          <input name="subject_code" placeholder="Subject Code" required>
+          <input name="subject_name" placeholder="Subject Name" required>
+          <input name="internal_max" type="number" placeholder="Internal Max (25)" value="25">
+          <input name="external_max" type="number" placeholder="External Max (75)" value="75">
+          <button type="submit" class="table-btn">Save Subject</button>
+        </form>
+
+        <form method="post">
+          <input type="hidden" name="action" value="marks">
+          <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
+          <input name="semester_no" type="number" min="1" max="6" placeholder="Sem" required>
+          <input name="subject_code" placeholder="Subject Code" required>
+          <input name="internal_marks" type="number" step="0.01" placeholder="Internal Marks" required>
+          <input name="external_marks" type="number" step="0.01" placeholder="External Marks" required>
+          <button type="submit" class="table-btn">Save Marks</button>
+        </form>
+
+        <form method="post">
+          <input type="hidden" name="action" value="attendance">
+          <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
+          <input name="semester_no" type="number" min="1" max="6" placeholder="Sem" required>
+          <input name="subject_code" placeholder="Subject Code" required>
+          <input name="total_classes" type="number" min="0" placeholder="Total Classes" required>
+          <input name="present_classes" type="number" min="0" placeholder="Present Classes" required>
+          <button type="submit" class="table-btn">Save Attendance</button>
+        </form>
+      </div>
+
+      <div class="applications-table-wrap">
+        <table class="applications-table" style="min-width:980px;">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Code</th>
+              <th>Internal</th>
+              <th>External</th>
+              <th>Total</th>
+              <th>Attendance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in records %}
+            <tr>
+              <td>{{ row.subject_name }}</td>
+              <td>{{ row.subject_code }}</td>
+              <td>{{ row.internal_marks }}/{{ row.internal_max }}</td>
+              <td>{{ row.external_marks }}/{{ row.external_max }}</td>
+              <td>{{ (row.internal_marks + row.external_marks)|round(2) }}/{{ row.internal_max + row.external_max }}</td>
+              <td>{{ row.present_classes }}/{{ row.total_classes }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6">No subjects added for the current semester.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+    <a href="/admin" class="link">Back to Dashboard</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Login | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>Student Login</h2>
+    <p class="subtitle">Login with Admission ID and password</p>
+    {% if error %}<p style="color:#c62828">{{ error }}</p>{% endif %}
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="username" class="preserve-case" placeholder="Admission ID" required>
+      <input type="password" name="password" class="preserve-case" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <a class="link" href="/forgot-password/student">Forgot Password?</a>
+    <a class="link" href="/login">Back</a>
+  </div>
+</body>
+</html>

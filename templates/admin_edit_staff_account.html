@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Staff Login Account | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card add-employee-card">
+    <h2>Edit Staff Login Account</h2>
+    <p class="subtitle">Update staff account login details</p>
+
+    <form method="post" class="add-employee-form">
+      <input type="text" name="employee_name" class="preserve-case" placeholder="Employee Name" value="{{ account.employee_name if account.employee_name else '' }}">
+      <input type="email" name="email" class="preserve-case" placeholder="Gmail" value="{{ account.email }}" required>
+      <input type="text" name="department" class="preserve-case" placeholder="Department" value="{{ account.department if account.department else '' }}">
+      <input type="text" name="designation" class="preserve-case" placeholder="Designation" value="{{ account.designation if account.designation else '' }}">
+      <select name="is_verified" class="preserve-case" required>
+        <option value="1" {% if account.is_verified %}selected{% endif %}>Verified</option>
+        <option value="0" {% if not account.is_verified %}selected{% endif %}>Not Verified</option>
+      </select>
+      <button type="submit" class="save-employee-btn">Update Account</button>
+    </form>
+
+    <a class="link" href="/admin/staff-accounts">Back to Staff Login Accounts</a>
+  </div>
+</body>
+</html>

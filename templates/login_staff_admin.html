@@ -12,8 +12,10 @@
     <form method="post">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <select name="login_type">
-        <option value="staff">Staff</option>
         <option value="admin">Admin</option>
+        <option value="hod">HOD</option>
+        <option value="staff">Staff</option>
+        <option value="management_staff">Management Staff</option>
       </select>
       <input type="text" name="login_id" class="preserve-case" placeholder="Gmail / Admin Username" required>
       <div class="password-wrapper">

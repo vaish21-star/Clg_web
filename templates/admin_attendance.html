@@ -1,0 +1,706 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Register</title>
+  <style>
+    :root{
+      --bg0:#0a1d42;
+      --bg1:#18457f;
+      --bg2:#2e6caf;
+      --line:rgba(180,213,255,.32);
+      --glass:rgba(52,104,176,.44);
+      --glass-2:rgba(28,62,118,.50);
+      --text:#e9f4ff;
+      --muted:#b9cef0;
+      --cyan:#72d8ff;
+      --cyan-soft:#a5ebff;
+      --good:#2cd09a;
+      --absent:#5d7dbe;
+      --late:#53a9ff;
+      --leave:#7fb7ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Segoe UI","Poppins",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 480px at 88% -6%,rgba(146,185,255,.34),transparent 64%),
+        radial-gradient(940px 580px at 4% 108%,rgba(130,222,255,.24),transparent 60%),
+        linear-gradient(148deg,var(--bg0),var(--bg1) 54%,var(--bg2));
+      min-height:100vh;
+      position:relative;
+      overflow-x:hidden;
+    }
+    body:before{
+      content:"";
+      position:fixed;
+      left:-12%;
+      bottom:-20%;
+      width:72%;
+      height:46%;
+      pointer-events:none;
+      background:linear-gradient(22deg,rgba(116,194,255,.26),rgba(126,178,255,.13) 45%,transparent 72%);
+      transform:skewY(-8deg);
+      filter:blur(2px);
+      z-index:-1;
+    }
+    body:after{
+      content:"";
+      position:fixed;
+      left:-6%;
+      bottom:-26%;
+      width:82%;
+      height:48%;
+      pointer-events:none;
+      background:linear-gradient(19deg,rgba(102,169,255,.22),rgba(126,214,255,.08) 54%,transparent 74%);
+      transform:skewY(-7deg);
+      z-index:-1;
+    }
+    .shell{width:min(1520px,97%);margin:16px auto 24px}
+    .glass{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:linear-gradient(165deg,var(--glass),var(--glass-2));
+      backdrop-filter:blur(14px) saturate(130%);
+      -webkit-backdrop-filter:blur(14px) saturate(130%);
+      box-shadow:0 16px 30px rgba(4,11,31,.34), inset 0 1px 0 rgba(228,239,255,.12);
+      position:relative;
+      overflow:hidden;
+    }
+    .glass:before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:linear-gradient(135deg,rgba(162,219,255,.12),transparent 35%,transparent 70%,rgba(128,189,255,.1));
+    }
+    .hero{
+      padding:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+    }
+    .kicker{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#8de8ff;font-weight:700}
+    .hero h1{margin:4px 0 0;font-size:34px;line-height:1}
+    .sub{margin:8px 0 0;color:var(--muted);font-size:16px}
+    .btn{
+      min-height:40px;
+      padding:0 14px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      color:#fff;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      font-weight:700;
+      background:linear-gradient(145deg,#3a72c1,#4f88d6);
+    }
+    .flash{
+      margin-top:12px;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid rgba(100,217,193,.32);
+      background:rgba(58,197,162,.16);
+      color:#dbfff1;
+      font-weight:600;
+    }
+    .filters{margin-top:16px;padding:16px}
+    .attendance-filters{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+      gap:8px;
+    }
+    .attendance-filters input,.attendance-filters select,.attendance-filters button{
+      min-height:40px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(18,43,87,.56);
+      color:var(--text);
+      padding:0 16px;
+      font-size:14px;
+    }
+    .attendance-filters button{
+      cursor:pointer;
+      font-weight:700;
+      background:linear-gradient(145deg,#2a9eb0,#3bc2ce);
+      width:100%;
+    }
+    .kpis{
+      margin-top:16px;
+      display:grid;
+      grid-template-columns:repeat(6,minmax(150px,1fr));
+      gap:8px;
+    }
+    .kpi{
+      min-height:120px;
+      border-radius:14px;
+      border:1px solid rgba(191,220,255,.3);
+      padding:14px;
+      box-shadow:0 10px 20px rgba(8,18,45,.24), inset 0 1px 0 rgba(242,249,255,.2);
+      background:linear-gradient(145deg,rgba(72,124,196,.76),rgba(86,157,218,.62));
+    }
+    .kpi .l{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+    .kpi .v{margin-top:8px;font-size:42px;line-height:1;font-weight:800}
+    .grid{
+      margin-top:16px;
+      display:grid;
+      grid-template-columns:1fr 1.35fr;
+      gap:8px;
+      align-items:start;
+    }
+    .card{padding:16px}
+    .head{
+      min-height:48px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-bottom:16px;
+      padding-bottom:16px;
+      border-bottom:1px solid rgba(163,198,255,.22);
+    }
+    .head h3{margin:0;font-size:16px;font-weight:650}
+    .pill{
+      font-size:12px;
+      font-weight:700;
+      border-radius:999px;
+      border:1px solid var(--line);
+      padding:8px 16px;
+      background:rgba(32,71,136,.56);
+      color:#def0ff;
+    }
+    .heatmap-wrap{
+      min-height:310px;
+      border:1px solid rgba(161,197,255,.34);
+      border-radius:12px;
+      background:rgba(22,48,95,.44);
+      padding:14px;
+    }
+    .heat-month{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:14px;
+      color:#d8eaff;
+      font-weight:700;
+      margin-bottom:12px;
+    }
+    .weekday{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:6px;
+      margin-bottom:6px;
+      color:#cfe2ff;
+      font-size:12px;
+      text-align:center;
+      font-weight:700;
+    }
+    .heat-grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:6px;
+    }
+    .heat-cell{
+      min-height:40px;
+      border-radius:8px;
+      border:1px solid rgba(162,199,255,.26);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      color:#ebf5ff;
+      font-size:12px;
+      font-weight:700;
+      box-shadow:inset 0 1px 0 rgba(228,240,255,.14);
+      transition:all .15s ease;
+    }
+    .heat-cell small{
+      position:absolute;
+      right:5px;
+      bottom:3px;
+      font-size:9px;
+      color:#c1d5f2;
+      font-weight:600;
+    }
+    .h0{background:rgba(80,115,176,.26)}
+    .h1{background:rgba(79,137,212,.34)}
+    .h2{background:rgba(80,172,222,.40)}
+    .h3{background:rgba(85,199,227,.44)}
+    .h4{background:rgba(114,224,225,.52)}
+    .heat-cell:hover{transform:translateY(-1px);border-color:rgba(154,226,255,.78);box-shadow:0 8px 16px rgba(14,50,99,.38)}
+    .heat-cell.today{border-color:rgba(146,231,255,.95);box-shadow:0 0 0 1px rgba(146,231,255,.5) inset,0 0 18px rgba(106,208,255,.32)}
+    .heat-legend{
+      margin-top:12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#dbebff;
+      font-size:12px;
+    }
+    .heat-legend i{
+      display:inline-block;
+      width:34px;
+      height:12px;
+      border-radius:6px;
+      border:1px solid rgba(178,208,255,.35);
+    }
+    .mini{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .mini .box{
+      border:1px solid rgba(165,199,255,.28);
+      border-radius:12px;
+      background:rgba(20,45,88,.56);
+      padding:12px;
+    }
+    .mini .k{font-size:11px;color:#bdd2f3;text-transform:uppercase;letter-spacing:.08em}
+    .mini .v{margin-top:6px;font-size:18px;font-weight:700}
+    .toolbar{
+      margin-top:16px;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      background:rgba(24,52,99,.50);
+    }
+    .chip{
+      min-height:40px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      padding:0 16px;
+      display:inline-flex;
+      align-items:center;
+      text-decoration:none;
+      color:#eef5ff;
+      font-size:12px;
+      font-weight:700;
+      background:linear-gradient(145deg,#3a72bf,#4f88d5);
+    }
+    .chip.search{min-width:220px;background:rgba(16,36,72,.62)}
+
+    .table-card{margin-top:16px;padding:12px}
+    .table-wrap{
+      border:1px solid rgba(165,199,255,.28);
+      border-radius:12px;
+      overflow:auto;
+      max-height:72vh;
+      background:rgba(19,43,84,.58);
+    }
+    .employee-table{width:100%;min-width:1900px;border-collapse:collapse}
+    .employee-table th,.employee-table td{
+      border:1px solid rgba(156,192,255,.22);
+      padding:8px 16px;
+      font-size:12px;
+      text-align:center;
+      white-space:nowrap;
+      color:#e9f4ff;
+    }
+    .employee-table thead th{
+      position:sticky;
+      top:0;
+      z-index:6;
+      background:linear-gradient(180deg,rgba(42,82,147,.84),rgba(41,77,136,.82));
+    }
+    .sticky-col,.sticky-col-2,.sticky-col-3{position:sticky;z-index:7;background:rgba(22,46,92,.92)}
+    th.sticky-col,th.sticky-col-2,th.sticky-col-3{z-index:9}
+    .sticky-col{left:0;min-width:56px}
+    .sticky-col-2{left:56px;min-width:112px}
+    .sticky-col-3{left:168px;min-width:250px;text-align:left}
+    .employee-table tbody tr:nth-child(odd) td{background:rgba(20,45,88,.50)}
+    .employee-table tbody tr:nth-child(even) td{background:rgba(16,37,72,.66)}
+    .employee-table tbody tr:hover td{background:rgba(44,78,126,.72)}
+    .sub-cell{font-size:11px;color:#bad0ef}
+    .name-wrap{display:flex;align-items:center;gap:8px}
+    .avatar{
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      border:1px solid rgba(171,209,255,.56);
+      background:linear-gradient(145deg,#5f9eff,#65ddff);
+      object-fit:cover;
+      flex:0 0 auto;
+    }
+    .avatar-fallback{
+      display:grid;
+      place-items:center;
+      color:#fff;
+      font-size:12px;
+      font-weight:800;
+    }
+    .selected-day{background:rgba(110,220,255,.15)!important}
+    .week-split{border-left:2px solid rgba(146,187,252,.45)!important}
+
+    .att{display:inline-block;min-width:62px;border-radius:999px;padding:4px 10px;font-weight:700}
+    .att-good{background:rgba(44,208,154,.22);color:#b8ffe0}
+    .att-mid{background:rgba(110,220,255,.2);color:#d4f4ff}
+    .att-risk{background:rgba(126,169,255,.22);color:#dde8ff}
+    .status-chip-group{display:inline-flex;gap:6px}
+    .status-chip{
+      min-width:54px;height:30px;border-radius:999px;border:1px solid rgba(163,196,255,.35);
+      background:rgba(22,46,92,.8);color:#e4eeff;font-size:11px;font-weight:700;cursor:pointer;
+    }
+    .status-chip.active{color:#fff;border-color:transparent}
+    .status-chip-p.active{background:var(--good)}
+    .status-chip-a.active{background:var(--absent)}
+    .status-chip-late.active{background:var(--late)}
+    .status-chip-l.active{background:var(--leave);color:#0f2f57}
+    .status-native{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+    .remarks{
+      min-width:170px;
+      min-height:32px;
+      border-radius:8px;
+      border:1px solid var(--line);
+      background:rgba(21,46,92,.62);
+      color:#e9f4ff;
+      padding:0 8px;
+    }
+    .actions{
+      margin-top:16px;
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(17,40,83,.5);
+    }
+    .btn2{
+      min-height:40px;
+      padding:0 16px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      font-weight:700;
+      cursor:pointer;
+      color:#f2f8ff;
+      background:linear-gradient(145deg,#3a72bf,#4f88d2);
+    }
+    .btn2.primary{background:linear-gradient(145deg,#47bfd0,#66e1e7)}
+    .toast{
+      position:fixed;right:24px;bottom:24px;padding:8px 16px;border-radius:8px;border:1px solid rgba(133,170,237,.52);
+      background:#214784;color:#fff;opacity:0;transform:translateY(8px);transition:all .18s ease;z-index:9999;
+    }
+    .toast.show{opacity:1;transform:translateY(0)}
+    @media (max-width:1220px){
+      .attendance-filters{grid-template-columns:repeat(2,minmax(180px,1fr))}
+      .kpis{grid-template-columns:repeat(2,minmax(170px,1fr))}
+      .grid{grid-template-columns:1fr}
+    }
+    @media (max-width:760px){
+      .shell{width:99%}
+      .kpis{grid-template-columns:1fr}
+      .toolbar{display:grid;grid-template-columns:1fr 1fr}
+      .chip.search{grid-column:span 2;width:100%}
+    }
+  </style>
+</head>
+<body>
+  {% set ns = namespace(at_risk=0, sum_pct=0) %}
+  {% for s in students %}
+    {% set ns.sum_pct = ns.sum_pct + s.attendance_pct %}
+    {% if s.attendance_pct < 75 %}{% set ns.at_risk = ns.at_risk + 1 %}{% endif %}
+  {% endfor %}
+  {% set avg_pct = ((ns.sum_pct / (students|length))|round(1)) if students else 0 %}
+
+  <div class="shell">
+    <section class="hero glass">
+      <div>
+        <p class="kicker">Premium Attendance Hub</p>
+        <h1>Division Register</h1>
+        <p class="sub">{{ month_label }} | Day {{ selected_day }} | {{ filters.subject or "Select subject" }}</p>
+      </div>
+      <div><a class="btn" href="/admin">Back to Dashboard</a></div>
+    </section>
+
+    {% if msg %}<div class="flash">{{ msg }}</div>{% endif %}
+
+    <section class="filters glass">
+      <form method="get" class="attendance-filters">
+        <input type="month" name="month" value="{{ filters.month }}">
+        <input type="date" name="attendance_date" value="{{ filters.attendance_date }}">
+        <input type="text" name="subject" class="preserve-case" placeholder="Subject (Ex: Mathematics)" value="{{ filters.subject }}">
+        <input type="number" min="1" max="12" name="period_no" value="{{ filters.period_no }}">
+        <input type="text" name="q" class="preserve-case" placeholder="Search student" value="{{ filters.q }}">
+        {% if is_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="branch" value="{{ staff_department }}">
+        {% else %}
+          <select name="branch"><option value="">All Branches</option>{% for b in branches %}<option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>{% endfor %}</select>
+        {% endif %}
+        <select name="semester"><option value="">All Semesters</option>{% for sem_no in [1,2,3,4,5,6] %}<option value="{{ sem_no }}" {% if filters.semester|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>{% endfor %}</select>
+        <button type="submit">Load Students</button>
+      </form>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi"><span class="l">Average Attendance</span><span class="v">{{ avg_pct }}%</span></div>
+      <div class="kpi"><span class="l">Present Today</span><span class="v">{{ summary.present_count }}</span></div>
+      <div class="kpi"><span class="l">Late Arrivals</span><span class="v">{{ summary.leave_count }}</span></div>
+      <div class="kpi"><span class="l">Absent Today</span><span class="v">{{ summary.absent_count }}</span></div>
+      <div class="kpi"><span class="l">Unmarked</span><span class="v">{{ summary.unmarked_count }}</span></div>
+      <div class="kpi"><span class="l">At Risk (&lt;75%)</span><span class="v">{{ ns.at_risk }}</span></div>
+    </section>
+
+    <section class="grid">
+      <article class="card glass">
+        <div class="head"><h3>Monthly Attendance Heatmap</h3><span class="pill">{{ month_label }}</span></div>
+        <div class="heatmap-wrap">
+          <div class="heat-month"><span>&lsaquo;</span><span>{{ month_label }}</span><span>&rsaquo;</span></div>
+          <div class="weekday"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
+          <div class="heat-grid">
+            {% for d in day_numbers %}
+              {% set idx = d - 1 %}
+              {% set st = day_wise_stats[idx] if idx < (day_wise_stats|length) else {} %}
+              {% set pct = st.get('present_pct', 0) %}
+              {% set b = 0 %}
+              {% if pct >= 90 %}{% set b = 4 %}
+              {% elif pct >= 80 %}{% set b = 3 %}
+              {% elif pct >= 70 %}{% set b = 2 %}
+              {% elif pct > 0 %}{% set b = 1 %}
+              {% endif %}
+              <div class="heat-cell h{{ b }} {% if d == selected_day %}today{% endif %}" title="Day {{ d }}: {{ pct }}%">
+                {{ d }}<small>{{ pct }}%</small>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="heat-legend"><span>Low</span><i class="h1"></i><i class="h2"></i><i class="h3"></i><i class="h4"></i><span>High</span></div>
+        </div>
+      </article>
+      <article class="card glass">
+        <div class="head"><h3>Attendance Trend</h3><span class="pill">Last 6 Months</span></div>
+        <div class="trend">
+          <canvas id="attendanceTrendChart" width="620" height="220"
+            data-pcts="{% for d in day_numbers %}{% set idx = d - 1 %}{% set st = day_wise_stats[idx] if idx < (day_wise_stats|length) else {} %}{{ st.get('present_pct', 0) }}{% if not loop.last %},{% endif %}{% endfor %}"></canvas>
+        </div>
+        <div class="head"><h3>Session Snapshot</h3><span class="pill">Live</span></div>
+        <div class="mini">
+          <div class="box"><div class="k">Subject</div><div class="v">{{ filters.subject or "-" }}</div></div>
+          <div class="box"><div class="k">Date</div><div class="v">{{ filters.attendance_date }}</div></div>
+          <div class="box"><div class="k">Branch</div><div class="v">{{ filters.branch or "All" }}</div></div>
+          <div class="box"><div class="k">Semester</div><div class="v">{% if filters.semester %}SEM {{ filters.semester }}{% else %}All{% endif %}</div></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="toolbar">
+      <span class="chip">Students: {{ summary.total_students }}</span>
+      <a class="chip" href="/admin/attendance/blank-sheet/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&q={{ filters.q|urlencode }}">Blank Sheet</a>
+      <a class="chip" href="/admin/attendance/daywise/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&q={{ filters.q|urlencode }}">Day-wise Excel</a>
+      <a class="chip" href="/admin/attendance/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&q={{ filters.q|urlencode }}">Full Register Excel</a>
+      <input id="attendance-live-search" class="chip search" type="text" placeholder="Search by student name or reg no">
+    </section>
+
+    <form method="post" class="attendance-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="month" value="{{ filters.month }}">
+      <input type="hidden" name="attendance_date" value="{{ filters.attendance_date }}">
+      <input type="hidden" name="subject" value="{{ filters.subject }}">
+      <input type="hidden" name="period_no" value="{{ filters.period_no }}">
+      <input type="hidden" name="branch" value="{{ filters.branch }}">
+      <input type="hidden" name="semester" value="{{ filters.semester }}">
+      <input type="hidden" name="q" value="{{ filters.q }}">
+      <input type="hidden" name="bulk_status" id="bulk-status-field" value="">
+
+      <section class="table-card glass">
+        <div class="table-wrap">
+          <table class="employee-table">
+            <thead>
+              <tr>
+                <th class="sticky-col">SI NO</th>
+                <th class="sticky-col-2">Reg No</th>
+                <th class="sticky-col-3">Student Name</th>
+                {% for day in day_numbers %}
+                  <th class="{% if day == selected_day %}selected-day{% endif %} {% if loop.index0 % 7 == 0 %}week-split{% endif %}">{{ day }}</th>
+                {% endfor %}
+                <th>Total</th><th>P</th><th>A</th><th>L</th><th>Att %</th><th>Mark {{ selected_day }}</th><th>Remarks</th><th>Marked By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in students %}
+              <tr data-student-name="{{ (s.student_name or '')|lower }}" data-student-reg="{{ (s.reg_no or '')|lower }}">
+                <td class="sticky-col">{{ loop.index }}</td>
+                <td class="sticky-col-2">{{ s.reg_no or "-" }}</td>
+                <td class="sticky-col-3">
+                  <div class="name-wrap">
+                    {% set photo_file = (s.photo_file or '').strip() %}
+                    {% if photo_file %}
+                      {% if photo_file.startswith('http://') or photo_file.startswith('https://') or photo_file.startswith('/static/') %}
+                        {% set photo_src = photo_file %}
+                      {% else %}
+                        {% set photo_src = '/static/uploads/' ~ photo_file %}
+                      {% endif %}
+                      <img class="avatar" src="{{ photo_src }}" alt="{{ s.student_name }}">
+                    {% else %}
+                      <span class="avatar avatar-fallback">{{ (s.student_name or 'S')[:1]|upper }}</span>
+                    {% endif %}
+                    <span>{{ s.student_name }}</span>
+                  </div>
+                  <div class="sub-cell">{{ s.semester_display }} | {{ s.branch }}</div>
+                  <input type="hidden" name="student_ids" value="{{ s.admission_id }}">
+                </td>
+                {% for day in day_numbers %}
+                  {% set st = s.daily_status.get(day) %}
+                  <td class="{% if day == selected_day %}selected-day{% endif %} {% if loop.index0 % 7 == 0 %}week-split{% endif %}">
+                    {% if st == "PRESENT" or st == "LATE" %}&#10003;
+                    {% elif st == "ABSENT" %}&#10007;
+                    {% elif st == "LEAVE" %}L
+                    {% else %}-{% endif %}
+                  </td>
+                {% endfor %}
+                <td>{{ s.total_marked_days }}</td>
+                <td>{{ s.present_days }}</td>
+                <td>{{ s.absent_days }}</td>
+                <td>{{ s.leave_days }}</td>
+                <td><span class="att {% if s.attendance_pct >= 85 %}att-good{% elif s.attendance_pct >= 75 %}att-mid{% else %}att-risk{% endif %}">{{ s.attendance_pct }}%</span></td>
+                <td>
+                  <div class="status-chip-group">
+                    <button type="button" class="status-chip status-chip-p" data-status="PRESENT">Present</button>
+                    <button type="button" class="status-chip status-chip-a" data-status="ABSENT">Absent</button>
+                    <button type="button" class="status-chip status-chip-late" data-status="LATE">Late</button>
+                    <button type="button" class="status-chip status-chip-l" data-status="LEAVE">Leave</button>
+                  </div>
+                  <select class="status-native status-select" name="quick_status_{{ s.admission_id }}">
+                    <option value=""></option>
+                    <option value="PRESENT" {% if s.quick_status == "PRESENT" %}selected{% endif %}>Present</option>
+                    <option value="ABSENT" {% if s.quick_status == "ABSENT" %}selected{% endif %}>Absent</option>
+                    <option value="LATE" {% if s.quick_status == "LATE" %}selected{% endif %}>Late</option>
+                    <option value="LEAVE" {% if s.quick_status == "LEAVE" %}selected{% endif %}>Leave</option>
+                  </select>
+                </td>
+                <td><input class="remarks preserve-case" type="text" name="quick_remarks_{{ s.admission_id }}" value="{{ s.quick_remarks }}" placeholder="Optional"></td>
+                <td>{{ s.marked_by }}</td>
+              </tr>
+              {% else %}
+                <tr><td colspan="{{ 11 + day_numbers|length }}">No students found for current filters.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button type="button" class="btn2" onclick="setBulkStatus('PRESENT')">Set All Present</button>
+        <button type="button" class="btn2" onclick="setBulkStatus('ABSENT')">Set All Absent</button>
+        <button type="button" class="btn2" onclick="setBulkStatus('LEAVE')">Set All Leave</button>
+        <button type="button" class="btn2" onclick="setBulkStatus('')">Clear All</button>
+        <button type="submit" class="btn2 primary" {% if not filters.subject or not students %}disabled{% endif %}>Save Attendance</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function showToast(msg){
+      var t=document.createElement("div");
+      t.className="toast";
+      t.textContent=msg;
+      document.body.appendChild(t);
+      requestAnimationFrame(function(){t.classList.add("show");});
+      setTimeout(function(){t.classList.remove("show");setTimeout(function(){t.remove();},250);},1300);
+    }
+    function syncChips(selectEl){
+      if(!selectEl) return;
+      var td=selectEl.closest("td");
+      if(!td) return;
+      var g=td.querySelector(".status-chip-group");
+      if(!g) return;
+      g.querySelectorAll(".status-chip").forEach(function(b){
+        b.classList.toggle("active", b.dataset.status === (selectEl.value||"").toUpperCase());
+      });
+    }
+    function syncAllChips(){document.querySelectorAll(".status-select").forEach(syncChips);}
+    function setBulkStatus(status){
+      var hidden=document.getElementById("bulk-status-field");
+      if(hidden) hidden.value=status||"";
+      document.querySelectorAll(".status-select").forEach(function(s){s.value=status||"";});
+      syncAllChips();
+      showToast(status?("Applied to all: "+status):"Cleared all");
+    }
+    function bindChipClicks(){
+      document.querySelectorAll(".status-chip-group .status-chip").forEach(function(btn){
+        btn.addEventListener("click",function(){
+          var td=btn.closest("td");
+          var sel=td?td.querySelector(".status-select"):null;
+          if(!sel) return;
+          sel.value=(btn.dataset.status||"").toUpperCase();
+          syncChips(sel);
+        });
+      });
+    }
+    function initSearch(){
+      var i=document.getElementById("attendance-live-search");
+      if(!i) return;
+      i.addEventListener("input",function(){
+        var q=(i.value||"").trim().toLowerCase();
+        document.querySelectorAll(".employee-table tbody tr").forEach(function(r){
+          var n=r.dataset.studentName||"";
+          var rg=r.dataset.studentReg||"";
+          if(!q || n.indexOf(q)>=0 || rg.indexOf(q)>=0) r.style.display="";
+          else if(r.dataset.studentName!==undefined) r.style.display="none";
+        });
+      });
+    }
+    function initTrend(){
+      var c=document.getElementById("attendanceTrendChart");
+      if(!c || !c.getContext) return;
+      var raw=(c.dataset.pcts||"").split(",").map(function(v){return Number(v||0);});
+      if(!raw.length) return;
+      var vals=[],step=Math.max(1,Math.floor(raw.length/6));
+      for(var i=0;i<raw.length && vals.length<6;i+=step){vals.push(raw[i]);}
+      while(vals.length<6){vals.push(vals.length?vals[vals.length-1]:0);}
+      var labels=["Jan","Feb","Mar","Apr","May","Jun"];
+      var ctx=c.getContext("2d");
+      var w=c.width,h=c.height,pL=42,pR=16,pT=18,pB=30,cw=w-pL-pR,ch=h-pT-pB;
+      ctx.clearRect(0,0,w,h);
+      ctx.strokeStyle="rgba(171,204,255,.28)";
+      for(var gy=0;gy<=4;gy++){var y=pT+(ch*gy/4);ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(w-pR,y);ctx.stroke();}
+      var pts=[];
+      for(var j=0;j<6;j++){
+        var x=pL+(cw*(j/5));
+        var y=pT + (1-(Math.max(0,Math.min(100,vals[j]))/100))*ch;
+        pts.push({x:x,y:y});
+        ctx.fillStyle="#d8e8ff";
+        ctx.font="12px Segoe UI";
+        ctx.fillText(labels[j],x-10,h-8);
+      }
+      ctx.fillStyle="#dbeaff";
+      ctx.font="12px Segoe UI";
+      [100,90,80,70,60].forEach(function(v,i){
+        var y=pT + (ch*(i/4));
+        ctx.fillText(v+"%",8,y+4);
+      });
+
+      var g=ctx.createLinearGradient(0,pT,0,pT+ch);
+      g.addColorStop(0,"rgba(110,220,255,.33)");
+      g.addColorStop(1,"rgba(110,220,255,0)");
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x,pT+ch);
+      ctx.lineTo(pts[0].x,pts[0].y);
+      for(var k=1;k<pts.length;k++){
+        var prev=pts[k-1],cur=pts[k];
+        var cx1=(prev.x+cur.x)/2;
+        ctx.bezierCurveTo(cx1,prev.y,cx1,cur.y,cur.x,cur.y);
+      }
+      ctx.lineTo(pts[pts.length-1].x,pT+ch);
+      ctx.closePath();
+      ctx.fillStyle=g;ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x,pts[0].y);
+      for(var m=1;m<pts.length;m++){
+        var p0=pts[m-1],p1=pts[m];
+        var c1=(p0.x+p1.x)/2;
+        ctx.bezierCurveTo(c1,p0.y,c1,p1.y,p1.x,p1.y);
+      }
+      ctx.strokeStyle="#6edcff";ctx.lineWidth=2.7;ctx.stroke();
+      pts.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle="#d7f6ff";ctx.fill();});
+    }
+    document.querySelectorAll(".status-select").forEach(function(el){el.addEventListener("change",function(){syncChips(el);});});
+    bindChipClicks(); syncAllChips(); initSearch(); initTrend();
+  </script>
+</body>
+</html>

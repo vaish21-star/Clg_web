@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Subject Syllabus | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .syllabus-panel {
+      border: 1px solid #d6dce5;
+      border-radius: 10px;
+      padding: 14px;
+      background: #fff;
+    }
+    .syllabus-title {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1f2b3d;
+    }
+    .syllabus-panel .employee-filters {
+      display: block;
+    }
+    .syllabus-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    .syllabus-grid.filter-row {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .syllabus-grid.filter-row > * {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    .syllabus-grid.filter-row .apply-inline {
+      flex: 0 0 auto;
+      min-width: 110px;
+    }
+    .syllabus-grid .apply-inline {
+      min-width: 110px;
+      justify-self: end;
+    }
+    .syllabus-grid .full-width {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 900px) {
+      .syllabus-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .syllabus-grid.filter-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 560px) {
+      .syllabus-grid {
+        grid-template-columns: 1fr;
+      }
+      .syllabus-grid .apply-inline {
+        justify-self: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard employee-page student-list-page">
+    <div class="header">
+      <h2>SRI VENKATESHWARA POLYTECHNIC</h2>
+      <p class="subtitle">Syllabus Library</p>
+    </div>
+
+    <div class="table-actions">
+      <a class="link action-link back-dashboard-link no-print" href="/admin">Back to Dashboard</a>
+    </div>
+
+    {% if msg %}
+      <div class="employee-filters-card" style="margin-bottom: 10px;">
+        <b>{{ msg }}</b>
+      </div>
+    {% endif %}
+
+    <div class="employee-filters-card syllabus-panel">
+      <h3 class="syllabus-title">Filter & Sort</h3>
+      <form method="get" class="employee-filters student-filters no-print">
+        <div class="syllabus-grid filter-row">
+          {% if is_staff %}
+            <input type="text" value="{{ staff_department }}" readonly>
+            <input type="hidden" name="department" value="{{ staff_department }}">
+          {% else %}
+            <select name="department">
+              <option value="">Select Dept</option>
+              {% for b in branches %}
+                <option value="{{ b }}" {% if filters.department == b %}selected{% endif %}>{{ b }}</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+
+          <select name="series">
+            <option value="">All Series</option>
+            {% for s in series_options %}
+              <option value="{{ s }}" {% if filters.series == s %}selected{% endif %}>{{ s }} Series</option>
+            {% endfor %}
+          </select>
+
+          <select name="year_no">
+            <option value="">All Years</option>
+            <option value="1" {% if filters.year_no == "1" %}selected{% endif %}>1st Year</option>
+            <option value="2" {% if filters.year_no == "2" %}selected{% endif %}>2nd Year</option>
+            <option value="3" {% if filters.year_no == "3" %}selected{% endif %}>3rd Year</option>
+          </select>
+
+          <select name="sort_by">
+            <option value="branch_asc" {% if filters.sort_by == "branch_asc" %}selected{% endif %}>Sort: Branch A-Z</option>
+            <option value="branch_desc" {% if filters.sort_by == "branch_desc" %}selected{% endif %}>Sort: Branch Z-A</option>
+            <option value="year_asc" {% if filters.sort_by == "year_asc" %}selected{% endif %}>Sort: Year Asc</option>
+            <option value="year_desc" {% if filters.sort_by == "year_desc" %}selected{% endif %}>Sort: Year Desc</option>
+          </select>
+
+          <button type="submit" class="apply-inline">Apply</button>
+        </div>
+      </form>
+    </div>
+
+    {% if can_manage_syllabus %}
+    <div class="employee-filters-card no-print syllabus-panel" style="margin-top: 12px;">
+      <h3 class="syllabus-title">Upload Syllabus PDF</h3>
+      <form method="post" enctype="multipart/form-data" class="employee-filters student-filters" id="syllabusUploadForm">
+        <div class="syllabus-grid">
+          {% if is_staff %}
+            <input type="text" value="{{ staff_department }}" readonly>
+            <input type="hidden" name="branch" value="{{ staff_department }}">
+          {% else %}
+            <select name="branch" required>
+              <option value="">Select Dept</option>
+              {% for b in branches %}
+                <option value="{{ b }}" {% if filters.department == b %}selected{% endif %}>{{ b }}</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+
+          <select name="series" id="seriesSelect" required>
+            <option value="">Select Series</option>
+            <option value="C15">C15 Series</option>
+            <option value="C20">C20 Series</option>
+            <option value="C25">C25 Series</option>
+            <option value="ADD">Add New Series</option>
+          </select>
+
+          <input type="text" name="custom_series" id="customSeriesInput" class="preserve-case" placeholder="New Series (e.g. C30)" style="display:none;">
+
+          <select name="year_no" required>
+            <option value="">Select Year</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+          </select>
+
+          <input type="file" name="syllabus_pdf" accept="application/pdf,.pdf" required>
+          <input type="hidden" name="sort_by" value="{{ filters.sort_by }}">
+
+          <button type="submit" class="apply-inline">Upload PDF</button>
+        </div>
+      </form>
+    </div>
+    {% else %}
+    <div class="employee-filters-card no-print" style="margin-top: 12px;">
+      <b>Upload restricted:</b> only Admin and HOD can upload syllabus PDFs.
+    </div>
+    {% endif %}
+
+    <div class="employee-table-card">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>SI NO</th>
+              <th>BRANCH</th>
+              <th>SERIES</th>
+              <th>1st Year PDF</th>
+              <th>2nd Year PDF</th>
+              <th>3rd Year PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in syllabus_rows %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ s.branch }}</td>
+                <td>{{ s.series }}</td>
+                <td>
+                  {% if s.year1_pdf %}
+                    <a class="table-link" target="_blank" href="{{ url_for('static', filename='syllabus_uploads/' + s.year1_pdf) }}">Open PDF</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.year2_pdf %}
+                    <a class="table-link" target="_blank" href="{{ url_for('static', filename='syllabus_uploads/' + s.year2_pdf) }}">Open PDF</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.year3_pdf %}
+                    <a class="table-link" target="_blank" href="{{ url_for('static', filename='syllabus_uploads/' + s.year3_pdf) }}">Open PDF</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6">No syllabus records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const seriesSelect = document.getElementById("seriesSelect");
+      const customSeriesInput = document.getElementById("customSeriesInput");
+      if (!seriesSelect || !customSeriesInput) return;
+
+      function toggleCustomSeries() {
+        if (seriesSelect.value === "ADD") {
+          customSeriesInput.style.display = "block";
+          customSeriesInput.required = true;
+        } else {
+          customSeriesInput.style.display = "none";
+          customSeriesInput.required = false;
+          customSeriesInput.value = "";
+        }
+      }
+
+      seriesSelect.addEventListener("change", toggleCustomSeries);
+      toggleCustomSeries();
+    })();
+  </script>
+</body>
+</html>

@@ -126,6 +126,7 @@
               <th>Amount</th>
               <th>Remarks</th>
               <th class="no-print">Receipt</th>
+              {% if can_manage_fees %}<th class="no-print">Delete</th>{% endif %}
             </tr>
           </thead>
           <tbody>
@@ -140,10 +141,17 @@
                 <td>{{ p.amount }}</td>
                 <td>{{ p.remarks if p.remarks else '-' }}</td>
                 <td class="no-print"><a class="table-link" href="/admin/fees/payment/{{ p.id }}/receipt">Download</a></td>
+                {% if can_manage_fees %}
+                <td class="no-print">
+                  <form method="post" action="/admin/fees/payment/{{ p.id }}/delete" onsubmit="return confirm('Delete this payment entry?');">
+                    <button type="submit">Delete</button>
+                  </form>
+                </td>
+                {% endif %}
               </tr>
             {% else %}
               <tr>
-                <td colspan="9">No payment history available.</td>
+                <td colspan="{% if can_manage_fees %}10{% else %}9{% endif %}">No payment history available.</td>
               </tr>
             {% endfor %}
           </tbody>

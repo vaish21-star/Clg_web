@@ -21,6 +21,8 @@
 
       <input type="text" name="mobile" class="preserve-case" placeholder="Mobile Number" value="{{ student.mobile }}" required>
       <input type="text" name="college_reg_no" class="preserve-case" placeholder="College Reg No" value="{{ student.college_reg_no }}">
+      <input type="text" name="admission_year" class="preserve-case" value="{{ student.admission_year if student.admission_year else '' }}" readonly>
+      <input type="number" name="year_sem" min="1" max="6" placeholder="Manual Semester Override (1-6)" value="{{ student.year_sem if student.year_sem else '' }}">
 
       <select name="gender" class="preserve-case">
         <option value="">Select Gender</option>
@@ -30,8 +32,23 @@
       </select>
 
       <input type="text" name="caste_category" class="preserve-case" placeholder="Caste Category" value="{{ student.caste_category }}">
-      <input type="text" name="alloted_category" class="preserve-case" placeholder="Alloted Category" value="{{ student.alloted_category }}">
+      <input type="text" name="alloted_category" class="preserve-case" placeholder="Alloted Category" value="{{ student.alloted_category }}" {% if not can_set_alloted_category %}readonly{% endif %}>
+      {% if not can_set_alloted_category %}
+      <small>Only Admin/Management can update Alloted Category.</small>
+      {% endif %}
       <input type="text" name="register_number" class="preserve-case" placeholder="Qualifying Exam Reg No" value="{{ student.register_number }}">
+      <input type="email" name="student_email" class="preserve-case" placeholder="Email ID" value="{{ student.student_email }}" {% if not can_edit_identity_ids %}readonly{% endif %}>
+      <input type="text" name="ssp_id" class="preserve-case" placeholder="SSP ID" value="{{ student.ssp_id }}" {% if not can_edit_identity_ids %}readonly{% endif %}>
+      <input type="text" name="apaar_id" class="preserve-case" placeholder="APAAR ID" value="{{ student.apaar_id }}" {% if not can_edit_identity_ids %}readonly{% endif %}>
+      {% if not can_edit_identity_ids %}
+      <small>Only Admin/HOD can update Email ID, SSP ID, and APAAR ID.</small>
+      {% endif %}
+      <input type="number" name="total_marks_obtained" placeholder="Total Marks Obtained" value="{{ student.total_marks_obtained if student.total_marks_obtained is not none else '' }}">
+      <input type="number" name="total_max_marks" placeholder="Total Max Marks" value="{{ student.total_max_marks if student.total_max_marks is not none else '' }}">
+      <input type="number" name="science_marks_obtained" placeholder="Science Marks Obtained" value="{{ student.science_marks_obtained if student.science_marks_obtained is not none else '' }}">
+      <input type="number" name="science_max_marks" placeholder="Science Max Marks" value="{{ student.science_max_marks if student.science_max_marks is not none else '' }}">
+      <input type="number" name="maths_marks_obtained" placeholder="Maths Marks Obtained" value="{{ student.maths_marks_obtained if student.maths_marks_obtained is not none else '' }}">
+      <input type="number" name="maths_max_marks" placeholder="Maths Max Marks" value="{{ student.maths_max_marks if student.maths_max_marks is not none else '' }}">
 
       <button type="submit" class="save-employee-btn">Update Student</button>
     </form>

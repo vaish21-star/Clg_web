@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Staff Login Accounts | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="dashboard employee-page student-list-page">
+    <div class="header">
+      <h2>Staff Login Accounts</h2>
+      <p class="subtitle">Registered staff account details</p>
+    </div>
+
+    <div class="table-actions">
+      <a class="link action-link back-dashboard-link no-print" href="/admin">Back to Dashboard</a>
+    </div>
+
+    {% if msg %}
+      <div class="employee-filters-card" style="margin-bottom: 10px;">
+        <b>{{ msg }}</b>
+      </div>
+    {% endif %}
+
+    <div class="employee-filters-card">
+      <form method="get" class="employee-filters student-filters no-print">
+        <input type="text" name="q" class="preserve-case" placeholder="Search by name / email" value="{{ filters.q }}">
+
+        <select name="department">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+            <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="designation">
+          <option value="">All Designations</option>
+          {% for d in designations %}
+            <option value="{{ d }}" {% if filters.designation == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="verified">
+          <option value="">All Status</option>
+          <option value="yes" {% if filters.verified == "yes" %}selected{% endif %}>Verified</option>
+          <option value="no" {% if filters.verified == "no" %}selected{% endif %}>Not Verified</option>
+        </select>
+
+        <button type="submit">Apply</button>
+      </form>
+    </div>
+
+    <div class="employee-table-card">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>SI NO</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Verified</th>
+              <th>Created At</th>
+              <th class="no-print">Edit</th>
+              <th class="no-print">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in accounts %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ a.employee_name }}</td>
+                <td>{{ a.email }}</td>
+                <td>{{ a.department }}</td>
+                <td>{{ a.designation }}</td>
+                <td>{{ "YES" if a.is_verified else "NO" }}</td>
+                <td>{{ a.created_at }}</td>
+                <td class="no-print">
+                  <a class="edit-employee-link" href="/admin/staff-accounts/edit/{{ a.id }}" title="Edit Account" aria-label="Edit Account">&#9998;</a>
+                </td>
+                <td class="no-print">
+                  <form method="post" action="/admin/staff-accounts/delete/{{ a.id }}" onsubmit="return confirm('Delete this staff login account?');">
+                    <button type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="9">No staff accounts found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

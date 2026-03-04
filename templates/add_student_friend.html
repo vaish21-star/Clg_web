@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Student | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="card">
+  <h2>Add Student</h2>
+  <p class="subtitle">Admin Panel</p>
+
+  <form method="post">
+    <input type="text" name="admission_id" placeholder="Admission ID" required>
+    <input type="text" name="student_name" placeholder="Student Name" required>
+
+    {% if is_staff %}
+      <input type="text" value="{{ staff_department }}" readonly>
+      <input type="hidden" name="branch" value="{{ staff_department }}">
+    {% else %}
+      <select name="branch">
+        <option>Computer Engineering</option>
+        <option>Electronics & Communication</option>
+        <option>Mechanical</option>
+        <option>Automobile</option>
+      </select>
+    {% endif %}
+
+    <input type="text" name="year_sem" placeholder="Year / Semester">
+    <input type="text" name="mobile" placeholder="Mobile Number">
+    <input type="password" name="password" class="preserve-case" placeholder="Set Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
+
+    <button type="submit">Add Student</button>
+  </form>
+
+  <a class="link" href="/admin">⬅ Back to Dashboard</a>
+</div>
+
+</body>
+</html>

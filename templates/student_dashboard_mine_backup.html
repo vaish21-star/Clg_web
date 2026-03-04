@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Dashboard | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="dashboard">
+  <div class="header">
+    <h2>Welcome, {{ student.student_name }}</h2>
+    <p class="subtitle">{{ student.branch }} | {{ student.admission_id }}</p>
+  </div>
+
+<div class="grid">
+
+  <a href="/admin/applications" class="box">
+    <h3>📄 Applications</h3>
+    <p>View & approve new student applications</p>
+  </a>
+
+  <a href="/add-student" class="box">
+    <h3>➕ Add Student</h3>
+    <p>Add student manually</p>
+  </a>
+
+  <a href="/add-education" class="box">
+    <h3>🎓 Education Details</h3>
+    <p>Add SSLC / ITI details</p>
+  </a>
+
+  <a href="/admin/fees" class="box">
+    <h3>💰 Fees</h3>
+    <p>Set admission & tuition fees</p>
+  </a>
+  <div class="box">
+  <h3>Academic Details</h3>
+  <p><b>Qualifying Exam:</b> {{ education.qualifying_exam }}</p>
+  <p><b>Year of Passing:</b> {{ education.year_of_passing }}</p>
+  <p><b>Register Number:</b> {{ education.register_number }}</p>
+  <p><b>Allocated Category:</b> {{ education.allocated_category }}</p>
+  <p><b>Admission Quota:</b> {{ education.admission_quota }}</p>
+</div>
+
+
+  <a href="/logout" class="box logout">
+    <h3>🚪 Logout</h3>
+    <p>Exit admin panel</p>
+  </a>
+
+</div>
+
+
+  <a class="link logout" href="/logout">🚪 Logout</a>
+</div>
+
+</body>
+</html>

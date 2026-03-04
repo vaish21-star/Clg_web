@@ -31,7 +31,7 @@
           value="{{ filters.q }}"
         >
 
-        {% if is_staff %}
+        {% if is_staff and not is_management_staff %}
           <input type="text" value="{{ staff_department }}" readonly>
           <input type="hidden" name="branch" value="{{ staff_department }}">
         {% else %}
@@ -75,7 +75,7 @@
     {% if can_manage_fees %}
     <div class="employee-filters-card no-print" style="margin-top: 12px;">
       <form method="post" class="employee-filters student-filters">
-        {% if is_staff %}
+        {% if is_staff and not is_management_staff %}
           <input type="text" value="{{ staff_department }}" readonly>
           <input type="hidden" name="fee_branch" value="{{ staff_department }}">
         {% else %}
@@ -122,6 +122,7 @@
               <th>Balance</th>
               <th>Fee State</th>
               <th class="no-print">History</th>
+              {% if can_manage_fees %}<th class="no-print">Delete Student</th>{% endif %}
             </tr>
           </thead>
           <tbody>
@@ -138,10 +139,17 @@
                 <td>{{ s.balance }}</td>
                 <td>{{ s.payment_state }}</td>
                 <td class="no-print"><a class="table-link" href="/admin/fees/student/{{ s.admission_id }}">Open</a></td>
+                {% if can_manage_fees %}
+                <td class="no-print">
+                  <form method="post" action="/admin/fees/student/{{ s.admission_id }}/delete" onsubmit="return confirm('Delete this student and related fee records?');">
+                    <button type="submit">Delete</button>
+                  </form>
+                </td>
+                {% endif %}
               </tr>
             {% else %}
               <tr>
-                <td colspan="11">No fee records found.</td>
+                <td colspan="{% if can_manage_fees %}12{% else %}11{% endif %}">No fee records found.</td>
               </tr>
             {% endfor %}
           </tbody>

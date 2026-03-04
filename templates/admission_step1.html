@@ -65,17 +65,7 @@
             <option>OBC</option>
           </select>
 
-          <select name="alloted_category" required>
-            <option value="">Alloted Category</option>
-            <option>1G</option>
-            <option>SCG</option>
-            <option>STG</option>
-            <option>2AG</option>
-            <option>2BG</option>
-            <option>3AG</option>
-            <option>3BG</option>
-            <option>GM</option>
-          </select>
+          <input type="text" value="Alloted Category will be assigned by Admin/Management" readonly>
         </div>
       </div>
 
@@ -104,8 +94,7 @@
           <input name="marks_obtained" placeholder="Marks Obtained">
           <input name="percentage" placeholder="Percentage">
         </div>
-
-        <div id="commonMarks" style="display:none;">
+        <div id="commonMarks" class="form-grid two-col" style="display:none;">
           <input type="number" name="total_marks" placeholder="Total Marks">
           <input type="number" name="marks_obtained" placeholder="Marks Obtained">
           <input type="number" name="percentage" placeholder="Percentage">
@@ -117,6 +106,8 @@
         <h3 class="section-title">Admission Details</h3>
 
         <div class="form-grid two-col">
+          <input name="admission_year" placeholder="Admission Year (YYYY-YY)" value="{{ admission_year }}" required>
+
           <select name="admission_quota" required>
             <option value="">Admission Quota</option>
             <option>Government</option>
@@ -176,12 +167,20 @@
 
     function toggleAcademicFields() {
       const exam = document.getElementById("qualifying_exam").value;
+      const schoolBlock = document.getElementById("school-marks");
+      const commonBlock = document.getElementById("commonMarks");
+      const isSchoolExam = (exam === "SSLC" || exam === "PUC");
+      const showCommon = !!exam && !isSchoolExam;
 
-      document.getElementById("school-marks").style.display =
-        (exam === "SSLC" || exam === "PUC") ? "grid" : "none";
+      schoolBlock.style.display = isSchoolExam ? "grid" : "none";
+      commonBlock.style.display = showCommon ? "grid" : "none";
 
-      document.getElementById("commonMarks").style.display =
-        (exam === "ITI" || exam === "CBSE" || exam === "ICSE") ? "grid" : "none";
+      schoolBlock.querySelectorAll("input,select,textarea").forEach((el) => {
+        el.disabled = !isSchoolExam;
+      });
+      commonBlock.querySelectorAll("input,select,textarea").forEach((el) => {
+        el.disabled = !showCommon;
+      });
     }
 
     function validateMobile() {
@@ -213,6 +212,23 @@
       }
     }
 
+    function togglePassword() {
+      const passwordInput = document.getElementById("password");
+      const toggleBtn = document.getElementById("togglePasswordBtn");
+      if (!passwordInput || !toggleBtn) return;
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        toggleBtn.setAttribute("aria-label", "Hide password");
+        toggleBtn.setAttribute("title", "Hide password");
+      } else {
+        passwordInput.type = "password";
+        toggleBtn.setAttribute("aria-label", "Show password");
+        toggleBtn.setAttribute("title", "Show password");
+      }
+    }
+
+    
+    document.addEventListener("DOMContentLoaded", toggleAcademicFields);
     
   </script>
 </body>

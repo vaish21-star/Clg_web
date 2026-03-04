@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Login | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <div class="card">
+    <h2>SVP Login Portal</h2>
+    <p class="subtitle">Sri Venkateshwara Polytechnic</p>
+
+    <form method="post">
+      <select name="role">
+        <option value="student">Student Login</option>
+        <option value="admin">Admin Login</option>
+      </select>
+
+      <input type="text" name="username" class="preserve-case" placeholder="Admission ID / Username" required autocapitalize="off" autocorrect="off" spellcheck="false">
+
+      <div class="password-wrapper">
+        <input type="password" name="password" id="login_password" class="preserve-case" placeholder="Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="current-password">
+        <button type="button" id="toggleLoginPasswordBtn" class="toggle-password" onclick="toggleLoginPassword()" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+
+      <button type="submit">Login</button>
+    </form>
+    <a href="/home">Home</a>
+  </div>
+
+  <script>
+    document.addEventListener("input", function (e) {
+      if (e.target.matches('input[name="password"]')) {
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.target.matches('input[name="password"]')) {
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    function toggleLoginPassword() {
+      const password = document.getElementById("login_password");
+      const toggleButton = document.getElementById("toggleLoginPasswordBtn");
+
+      if (password.type === "password") {
+        password.type = "text";
+        toggleButton.setAttribute("aria-label", "Hide password");
+        toggleButton.setAttribute("title", "Hide password");
+      } else {
+        password.type = "password";
+        toggleButton.setAttribute("aria-label", "Show password");
+        toggleButton.setAttribute("title", "Show password");
+      }
+    }
+  </script>
+</body>
+
+</html>

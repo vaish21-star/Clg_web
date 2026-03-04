@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Result Detail | {{ summary.register_number }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      display: block !important;
+      margin: 0 !important;
+      padding: 12px !important;
+      background: #eef2f8 !important;
+    }
+    .sheet-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin: 10px auto;
+      max-width: 980px;
+      width: min(980px, 100%);
+      flex-wrap: wrap;
+    }
+    .sheet-actions .table-btn,
+    .sheet-actions .table-btn:visited {
+      display: inline-block;
+      text-decoration: none;
+      color: #0f2f5c;
+      background: #ffffff;
+      border: 1px solid #2e568f;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+      line-height: 1.1;
+      box-shadow: 0 2px 8px rgba(30, 60, 100, 0.1);
+      cursor: pointer;
+    }
+    .sheet-actions .table-btn:hover {
+      background: #eaf2ff;
+    }
+    .marks-shell {
+      width: min(980px, 100%);
+      margin: 12px auto;
+      border: 1.5px solid #111;
+      background: #fff;
+      color: #111;
+      font-family: "Times New Roman", Times, serif;
+    }
+    .sheet-head {
+      border-bottom: 1px solid #111;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: 1fr 130px;
+      gap: 10px;
+    }
+    .sheet-no { font-weight: 700; margin-bottom: 4px; }
+    .gov-line {
+      text-align: center;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .gov-line.big { font-size: 16px; }
+    .gov-line.mid { font-size: 14px; }
+    .gov-line.small { font-size: 13px; }
+    .photo-space {
+      border: 1px solid #111;
+      height: 155px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      text-align: center;
+    }
+    .block { border-bottom: 1px solid #111; padding: 6px 8px; }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+      font-size: 16px;
+    }
+    .meta-row b { display: inline-block; min-width: 170px; }
+    .marks-table, .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+    .marks-table th, .marks-table td, .summary-table th, .summary-table td {
+      border: 1px solid #111;
+      padding: 4px 6px;
+    }
+    .marks-table th, .summary-table th { font-weight: 700; }
+    .c { text-align: center; }
+    .bridge {
+      border-top: 1px solid #111;
+      border-bottom: 1px solid #111;
+      padding: 6px 8px;
+      text-align: center;
+      min-height: 70px;
+      font-size: 20px;
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .note {
+      padding: 6px 8px;
+      font-size: 13px;
+      border-bottom: 1px solid #111;
+    }
+    .signs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      padding: 20px 10px 14px 10px;
+      font-size: 13px;
+    }
+    .sign-item { text-align: center; }
+    .sign-line { border-top: 1px solid #111; margin-bottom: 6px; height: 20px; }
+    @media print {
+      @page { size: A4 portrait; margin: 8mm; }
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      .marks-shell {
+        width: 194mm;
+        min-height: 279mm;
+        margin: 0 auto;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet-actions no-print">
+    <a class="table-btn" href="/admin/results">Back to Results</a>
+    <button type="button" class="table-btn" onclick="window.print()">Print / Save PDF</button>
+    <a class="table-btn" href="/admin/results/student/{{ summary.register_number }}/pdf">Download PDF</a>
+  </div>
+
+  <div class="marks-shell">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-no">No : {{ summary.register_number }}</div>
+        <div class="gov-line mid">GOVERNMENT OF KARNATAKA</div>
+        <div class="gov-line small">DEPARTMENT OF TECHNICAL EDUCATION, BANGALORE</div>
+        <div class="gov-line big">BOARD OF TECHNICAL EXAMINATIONS</div>
+        <div class="gov-line mid">PROVISIONAL MARKS CARD</div>
+        <div class="gov-line mid">SEMESTER EXAMINATIONS {{ summary.exam_session if summary.exam_session else '-' }}</div>
+      </div>
+      <div class="photo-space">Passport Size Photo Space</div>
+    </div>
+
+    <div class="block">
+      <div class="meta-grid">
+        <div class="meta-row"><b>Programme</b>: {{ summary.branch if summary.branch else '-' }}</div>
+        <div class="meta-row"><b>Register No</b>: {{ summary.register_number }}</div>
+        <div class="meta-row"><b>Name of Candidate</b>: {{ summary.student_name }}</div>
+        <div class="meta-row"><b>Date of Result</b>: {{ summary.exam_session if summary.exam_session else '-' }}</div>
+      </div>
+    </div>
+
+    <table class="marks-table">
+      <thead>
+        <tr>
+          <th class="c">Sem</th>
+          <th class="c">S.No</th>
+          <th>COURSE Code & COURSE TITLE</th>
+          <th class="c">Credits Applied</th>
+          <th class="c">Credits Earned</th>
+          <th class="c">Grade Points</th>
+          <th class="c">Grade Awarded</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in subject_rows %}
+          {% set is_fail = 'fail' in (s.result_status or '')|lower %}
+          <tr>
+            <td class="c">{{ s.semester_no if s.semester_no else '-' }}</td>
+            <td class="c">{{ loop.index }}</td>
+            <td>{{ s.subject_code if s.subject_code else '-' }} {{ s.subject_name if s.subject_name else '-' }}</td>
+            <td class="c">{{ s.credit if s.credit else '-' }}</td>
+            <td class="c">{{ '0' if is_fail else (s.credit if s.credit else '-') }}</td>
+            <td class="c">-</td>
+            <td class="c">{{ s.grade if s.grade else '-' }}</td>
+          </tr>
+        {% else %}
+          <tr><td class="c" colspan="7">No subject records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Semester</th>
+          <th class="c">I</th>
+          <th class="c">II</th>
+          <th class="c">III</th>
+          <th class="c">IV</th>
+          <th class="c">V</th>
+          <th class="c">VI</th>
+          <th>Cumulative</th>
+          <th>Upto this Exam</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Credit Applied</td>
+          <td class="c">{{ summary.credit_applied_s1 or '-' }}</td>
+          <td class="c">{{ summary.credit_applied_s2 or '-' }}</td>
+          <td class="c">{{ summary.credit_applied_s3 or '-' }}</td>
+          <td class="c">{{ summary.credit_applied_s4 or '-' }}</td>
+          <td class="c">{{ summary.credit_applied_s5 or '-' }}</td>
+          <td class="c">{{ summary.credit_applied_s6 or '-' }}</td>
+          <td>Credit Earned</td>
+          <td class="c">{{ summary.credit_earned_total or '-' }}</td>
+        </tr>
+        <tr>
+          <td>Credit Earned</td>
+          <td class="c">{{ summary.credit_earned_s1 or '-' }}</td>
+          <td class="c">{{ summary.credit_earned_s2 or '-' }}</td>
+          <td class="c">{{ summary.credit_earned_s3 or '-' }}</td>
+          <td class="c">{{ summary.credit_earned_s4 or '-' }}</td>
+          <td class="c">{{ summary.credit_earned_s5 or '-' }}</td>
+          <td class="c">{{ summary.credit_earned_s6 or '-' }}</td>
+          <td>CGPA</td>
+          <td class="c">{{ summary.cgpa or '-' }}</td>
+        </tr>
+        <tr>
+          <td>SGPA (Attempts)</td>
+          <td class="c">{{ summary.sgpa_s1 or '-' }}{% if summary.attempts_s1 %} ({{ summary.attempts_s1 }}){% endif %}</td>
+          <td class="c">{{ summary.sgpa_s2 or '-' }}{% if summary.attempts_s2 %} ({{ summary.attempts_s2 }}){% endif %}</td>
+          <td class="c">{{ summary.sgpa_s3 or '-' }}{% if summary.attempts_s3 %} ({{ summary.attempts_s3 }}){% endif %}</td>
+          <td class="c">{{ summary.sgpa_s4 or '-' }}{% if summary.attempts_s4 %} ({{ summary.attempts_s4 }}){% endif %}</td>
+          <td class="c">{{ summary.sgpa_s5 or '-' }}{% if summary.attempts_s5 %} ({{ summary.attempts_s5 }}){% endif %}</td>
+          <td class="c">{{ summary.sgpa_s6 or '-' }}{% if summary.attempts_s6 %} ({{ summary.attempts_s6 }}){% endif %}</td>
+          <td>% Conversion</td>
+          <td class="c">{{ summary.percentage or '-' }}</td>
+        </tr>
+        <tr>
+          <td colspan="7"></td>
+          <td>Results</td>
+          <td class="c">{{ summary.final_result or '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="block"><b>BRIDGE COURSES</b></div>
+    <div class="bridge">NO Bridge Subject Appearance</div>
+
+    <div class="note">
+      Note: Verify this marks card as per GO regulations for Diploma Programme and report discrepancies immediately.
+    </div>
+
+    <div class="signs">
+      <div class="sign-item">
+        <div class="sign-line"></div>
+        Signature of the Candidate
+      </div>
+      <div class="sign-item">
+        <div class="sign-line"></div>
+        Head of Department
+      </div>
+      <div class="sign-item">
+        <div class="sign-line"></div>
+        Principal
+      </div>
+    </div>
+  </div>
+</body>
+</html>

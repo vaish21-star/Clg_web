@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Result | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .result-shell {
+      background: linear-gradient(180deg, rgba(25, 56, 99, 0.96), rgba(17, 47, 88, 0.96));
+      border: 1px solid rgba(160, 194, 236, 0.32);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 14px 30px rgba(8, 22, 44, 0.22);
+    }
+    .result-title {
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+    .result-subtitle {
+      margin-top: 6px;
+      color: #d9e8ff;
+    }
+    .result-card {
+      border-radius: 14px;
+      border: 1px solid #8eabd0;
+      background: linear-gradient(180deg, #f8fbff, #eff5ff);
+      box-shadow: 0 6px 16px rgba(16, 41, 76, 0.18);
+    }
+    .result-card .table-wrap {
+      border-radius: 12px;
+      overflow: auto;
+    }
+    .result-card .employee-table th {
+      background: #d6e4fb;
+      color: #163260;
+    }
+    .result-card .employee-table td {
+      color: #203454;
+    }
+    .result-card .employee-table tbody tr:nth-child(even) {
+      background: #f4f8ff;
+    }
+    .result-badge {
+      display: inline-block;
+      min-width: 88px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 12px;
+      border: 1px solid #b6caeb;
+      background: #eaf2ff;
+      color: #1c3f74;
+    }
+    .result-badge.fail {
+      background: #ffeceb;
+      border-color: #f3b4ad;
+      color: #9f281a;
+    }
+    .section-gap {
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard employee-page student-list-page result-shell">
+    <div class="header">
+      <h2 class="result-title">Student Result</h2>
+      <p class="subtitle result-subtitle">Summary view after import</p>
+    </div>
+
+    <div class="table-actions">
+      <a class="link action-link back-dashboard-link no-print" href="/admin">Back to Dashboard</a>
+    </div>
+    <div class="table-actions no-print">
+      <button type="button" class="table-btn" onclick="window.print()">Print / Save PDF</button>
+      <a class="table-btn" href="/admin/results/pdf?reg_no={{ filters.reg_no }}&branch={{ filters.branch }}&sem={{ filters.sem }}&sort_by={{ filters.sort_by }}">Download Results PDF</a>
+    </div>
+
+    {% if msg %}
+      <div class="employee-filters-card" style="margin-bottom: 10px;">
+        <b>{{ msg }}</b>
+      </div>
+    {% endif %}
+
+    {% if can_manage_results %}
+    <div class="employee-filters-card no-print" style="margin-top: 12px;">
+      <form method="post" enctype="multipart/form-data" class="employee-filters student-filters">
+        <select name="import_type">
+          <option value="auto">Auto Detect</option>
+          <option value="excel">Excel</option>
+          <option value="pdf">PDF</option>
+        </select>
+        <input type="file" name="result_file" accept=".pdf,.xlsx,.xlsm,.xltx,.xltm" required>
+        <button type="submit">Import Result</button>
+      </form>
+    </div>
+
+    <div class="employee-table-card no-print result-card section-gap">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>Imported File</th>
+              <th>Rows</th>
+              <th>Imported At</th>
+              <th>Show Imported PDF</th>
+              <th>Replace</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for imp in imports %}
+              <tr>
+                <td>{{ imp.source_file }}</td>
+                <td>{{ imp.row_count }}</td>
+                <td>{{ imp.imported_at }}</td>
+                <td>
+                  {% if imp.source_file and imp.source_file.lower().endswith('.pdf') %}
+                    <a class="table-link" target="_blank" href="{{ url_for('static', filename='result_uploads/' + imp.source_file) }}">Open PDF</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="post" action="/admin/results/import/replace" enctype="multipart/form-data">
+                    <input type="hidden" name="source_file" value="{{ imp.source_file }}">
+                    <input type="file" name="replace_file" required>
+                    <button type="submit">Replace</button>
+                  </form>
+                </td>
+                <td>
+                  <form method="post" action="/admin/results/import/delete" onsubmit="return confirm('Delete this imported result file and all its rows?');">
+                    <input type="hidden" name="source_file" value="{{ imp.source_file }}">
+                    <button type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6">No imported files found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="employee-filters-card result-card section-gap">
+      <form method="get" class="employee-filters student-filters no-print">
+        <input type="text" name="reg_no" class="preserve-case" placeholder="Search by Reg No" value="{{ filters.reg_no }}">
+
+        {% if is_staff and not is_management_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="branch" value="{{ staff_department }}">
+        {% else %}
+          <select name="branch">
+            <option value="">All Branches</option>
+            {% for b in branches %}
+              <option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+
+        <select name="sem">
+          <option value="">All Sem</option>
+          {% for sem_no in [1,2,3,4,5,6] %}
+            <option value="{{ sem_no }}" {% if filters.sem == sem_no|string %}selected{% endif %}>Sem {{ sem_no }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="sort_by">
+          <option value="recent" {% if filters.sort_by == "recent" %}selected{% endif %}>Sort: Latest Import</option>
+          <option value="branch" {% if filters.sort_by == "branch" %}selected{% endif %}>Sort: Branch</option>
+          <option value="sem" {% if filters.sort_by == "sem" %}selected{% endif %}>Sort: Sem</option>
+          <option value="reg_no" {% if filters.sort_by == "reg_no" %}selected{% endif %}>Sort: Reg No</option>
+        </select>
+
+        <button type="submit">Apply</button>
+      </form>
+    </div>
+
+    <div class="employee-table-card result-card section-gap">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>SI NO</th>
+              <th>NAME</th>
+              <th>REG NO</th>
+              <th>SEM</th>
+              <th>BRANCH</th>
+              <th>PASS/FAIL</th>
+              <th>PERCENTAGE (% CONVERSION)</th>
+              <th>CGPA</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td><a class="table-link" href="/admin/results/student/{{ r.register_number }}">{{ r.student_name if r.student_name else '-' }}</a></td>
+                <td><a class="table-link" href="/admin/results/student/{{ r.register_number }}">{{ r.register_number }}</a></td>
+                <td>{{ r.semester_no if r.semester_no else '-' }}</td>
+                <td>{{ r.branch if r.branch else '-' }}</td>
+                <td>
+                  {% set rs = (r.final_result or '-') %}
+                  <span class="result-badge {% if 'fail' in rs|lower %}fail{% endif %}">{{ rs }}</span>
+                </td>
+                <td>{{ r.percentage if r.percentage else '-' }}</td>
+                <td>{{ r.cgpa if r.cgpa else '-' }}</td>
+                <td class="no-print">
+                  <a class="table-link" target="_blank" href="/admin/results/student/{{ r.register_number }}">Print</a>
+                  |
+                  <a class="table-link" href="/admin/results/student/{{ r.register_number }}/pdf">PDF</a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="9">No result records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

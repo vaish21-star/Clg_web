@@ -137,6 +137,21 @@
       background: #eef4ff;
       color: #173b73;
     }
+    .status-chip.paid {
+      background: #e9f8ef;
+      color: #0f5a2a;
+      border-color: #9ed5b2;
+    }
+    .status-chip.pending {
+      background: #fff8e8;
+      color: #7a4f00;
+      border-color: #e6cb90;
+    }
+    .status-chip.not-paid {
+      background: #fdeff1;
+      color: #7f1f2d;
+      border-color: #e4aab2;
+    }
 
     .section {
       padding: 12px;
@@ -211,15 +226,16 @@
       color: #12315f;
     }
 
-    .doc-page {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 12px;
-      break-inside: avoid-page;
-      page-break-inside: avoid;
-      background: #fff;
-    }
+      .doc-page {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 12px;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+        page-break-after: always;
+        background: #fff;
+      }
 
     .doc-page h4 {
       margin: 0 0 8px;
@@ -247,6 +263,10 @@
     .muted {
       color: var(--muted);
       font-size: 13px;
+    }
+    .amount {
+      font-weight: 700;
+      letter-spacing: 0.2px;
     }
 
     .signatures {
@@ -354,6 +374,7 @@
       }
       .doc-page {
         page-break-before: always;
+        page-break-after: always;
         break-inside: avoid-page;
         page-break-inside: avoid;
         border: none !important;
@@ -379,6 +400,7 @@
   <div class="app-shell">
     <div class="top-bar no-print">
       <button type="button" class="btn primary" onclick="window.print()">Print / Save PDF</button>
+      <a href="/admin/student/{{ student.admission_id }}/admission-pdf" class="btn secondary">Download Admission PDF</a>
       <a href="/admin/download-all/{{ student.admission_id }}" class="btn secondary">Download Documents</a>
       <a href="/admin/student-details" class="btn secondary">Back to Student Details</a>
     </div>
@@ -429,14 +451,41 @@
           <div class="kv"><div class="k">Alloted Category</div><div class="v">{{ personal.alloted_category if personal else '-' }}</div></div>
           <div class="kv"><div class="k">Religion</div><div class="v">{{ personal.religion if personal else '-' }}</div></div>
           <div class="kv"><div class="k">Nationality</div><div class="v">{{ personal.indian_nationality if personal else '-' }}</div></div>
-          <div class="kv"><div class="k">Qualifying Exam</div><div class="v">{{ personal.qualifying_exam if personal else '-' }}</div></div>
-          <div class="kv"><div class="k">Qualifying Reg No</div><div class="v">{{ personal.register_number if personal else '-' }}</div></div>
-          <div class="kv"><div class="k">Year of Passing</div><div class="v">{{ personal.year_of_passing if personal else '-' }}</div></div>
+          {% set q_exam = (((personal.qualifying_exam if personal else '') or (education.qualifying_exam if education else '')) or '')|upper %}
+          <div class="kv"><div class="k">Qualifying Exam</div><div class="v">{{ (personal.qualifying_exam if personal else '') or (education.qualifying_exam if education else '-') }}</div></div>
+          <div class="kv"><div class="k">Qualifying Reg No</div><div class="v">{{ (personal.register_number if personal else '') or (education.register_number if education else '-') }}</div></div>
+          <div class="kv"><div class="k">Year of Passing</div><div class="v">{{ (personal.year_of_passing if personal else '') or (education.year_of_passing if education else '-') }}</div></div>
+          <div class="kv"><div class="k">Total Marks</div><div class="v">{% set t_obt = education.total_marks_obtained if education else none %}{% set t_max = education.total_max_marks if education else none %}{% set t_pair_valid = (t_obt is not none and t_obt != '' and t_max is not none and t_max != '' and not (t_obt|int == 0 and t_max|int == 0)) %}{% if t_pair_valid %}{{ t_obt }}/{{ t_max }}{% elif personal and personal.total_marks is not none and personal.total_marks != '' %}{{ personal.total_marks }}{% elif t_obt is not none and t_obt != '' and t_obt|int != 0 %}{{ t_obt }}{% else %}-{% endif %}</div></div>
+          {% if q_exam in ["SSLC", "PUC"] %}
+          <div class="kv"><div class="k">Science Marks</div><div class="v">{% set s_obt = education.science_marks_obtained if education else none %}{% set s_max = education.science_max_marks if education else none %}{% set s_pair_valid = (s_obt is not none and s_obt != '' and s_max is not none and s_max != '' and not (s_obt|int == 0 and s_max|int == 0)) %}{% if s_pair_valid %}{{ s_obt }}/{{ s_max }}{% elif personal and personal.science_marks is not none and personal.science_marks != '' %}{{ personal.science_marks }}{% elif s_obt is not none and s_obt != '' and s_obt|int != 0 %}{{ s_obt }}{% else %}-{% endif %}</div></div>
+          <div class="kv"><div class="k">Maths Marks</div><div class="v">{% set m_obt = education.maths_marks_obtained if education else none %}{% set m_max = education.maths_max_marks if education else none %}{% set m_pair_valid = (m_obt is not none and m_obt != '' and m_max is not none and m_max != '' and not (m_obt|int == 0 and m_max|int == 0)) %}{% if m_pair_valid %}{{ m_obt }}/{{ m_max }}{% elif personal and personal.maths_marks is not none and personal.maths_marks != '' %}{{ personal.maths_marks }}{% elif m_obt is not none and m_obt != '' and m_obt|int != 0 %}{{ m_obt }}{% else %}-{% endif %}</div></div>
+          {% endif %}
           <div class="kv"><div class="k">Admission Quota</div><div class="v">{{ personal.admission_quota if personal else '-' }}</div></div>
           <div class="kv"><div class="k">Father</div><div class="v">{{ personal.father_name if personal else '-' }}{% if personal and personal.father_mobile %} ({{ personal.father_mobile }}){% endif %}</div></div>
           <div class="kv"><div class="k">Mother</div><div class="v">{{ personal.mother_name if personal else '-' }}{% if personal and personal.mother_mobile %} ({{ personal.mother_mobile }}){% endif %}</div></div>
           <div class="kv full"><div class="k">Residential Address</div><div class="v">{{ personal.residential_address if personal and personal.residential_address else '-' }}</div></div>
           <div class="kv full"><div class="k">Permanent Address</div><div class="v">{{ personal.permanent_address if personal and personal.permanent_address else '-' }}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Fee Snapshot</h3>
+        <div class="kv-grid">
+          <div class="kv"><div class="k">Academic Year</div><div class="v">{{ fee_summary.academic_year if fee_summary else '-' }}</div></div>
+          <div class="kv"><div class="k">Current Sem</div><div class="v">{{ fee_summary.current_sem if fee_summary else '-' }}</div></div>
+          <div class="kv"><div class="k">Total Due</div><div class="v amount">{{ fee_summary.total_due if fee_summary else '-' }}</div></div>
+          <div class="kv"><div class="k">Total Paid</div><div class="v amount">{{ fee_summary.total_paid if fee_summary else '-' }}</div></div>
+          <div class="kv"><div class="k">Balance</div><div class="v amount">{{ fee_summary.balance if fee_summary else '-' }}</div></div>
+          <div class="kv">
+            <div class="k">Fee State</div>
+            <div class="v">
+              {% if fee_summary %}
+                <span class="status-chip {% if fee_summary.payment_state == 'PAID' %}paid{% elif fee_summary.payment_state == 'PENDING' %}pending{% else %}not-paid{% endif %}">{{ fee_summary.payment_state }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -484,6 +533,17 @@
             <iframe class="doc-frame" src="{{ url_for('static', filename='uploads/' + docs.aadhaar_file) }}"></iframe>
           {% else %}
             <img class="doc-preview" src="{{ url_for('static', filename='uploads/' + docs.aadhaar_file) }}" alt="Aadhaar">
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if docs.student_photo %}
+        <div class="doc-page">
+          <h4>Student Photo</h4>
+          {% if docs.student_photo.lower().endswith('.pdf') %}
+            <iframe class="doc-frame" src="{{ url_for('static', filename='uploads/' + docs.student_photo) }}"></iframe>
+          {% else %}
+            <img class="doc-preview" src="{{ url_for('static', filename='uploads/' + docs.student_photo) }}" alt="Student Photo">
           {% endif %}
         </div>
         {% endif %}
