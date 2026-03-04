@@ -62,36 +62,70 @@
       </div>
     </div>
 
-    <div id="attendance" class="tab-panel">
-      <div class="summary-row">
-        <div class="summary-box"><label>Overall Attendance</label><h3>{{ attendance_summary.overall_pct }}%</h3></div>
-        <div class="summary-box"><label>Total Classes</label><h3>{{ attendance_summary.total_classes }}</h3></div>
-        <div class="summary-box"><label>Present</label><h3>{{ attendance_summary.present_classes }}</h3></div>
-        <div class="summary-box"><label>Absent</label><h3>{{ attendance_summary.absent_classes }}</h3></div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Code</th>
-            <th>Present/Total</th>
-            <th>Percentage</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in subject_rows %}
-          <tr>
-            <td>{{ row.subject_name }}</td>
-            <td>{{ row.subject_code }}</td>
-            <td>{{ row.present_classes }}/{{ row.total_classes }}</td>
-            <td>{{ row.attendance_pct }}%</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="4">No attendance records yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+	    <div id="attendance" class="tab-panel">
+	      <div class="summary-row">
+	        <div class="summary-box"><label>Overall Attendance</label><h3>{{ attendance_summary.overall_pct }}%</h3></div>
+	        <div class="summary-box"><label>Total Classes</label><h3>{{ attendance_summary.total_classes }}</h3></div>
+	        <div class="summary-box"><label>Present</label><h3>{{ attendance_summary.present_classes }}</h3></div>
+	        <div class="summary-box"><label>Absent</label><h3>{{ attendance_summary.absent_classes }}</h3></div>
+	        <div class="summary-box"><label>Leave</label><h3>{{ attendance_summary.leave_classes }}</h3></div>
+	      </div>
+	      <table>
+	        <thead>
+	          <tr>
+	            <th>Subject</th>
+	            <th>Code</th>
+	            <th>Present</th>
+	            <th>Absent</th>
+	            <th>Leave</th>
+	            <th>Total</th>
+	            <th>Percentage</th>
+	          </tr>
+	        </thead>
+	        <tbody>
+	          {% for row in attendance_rows %}
+	          <tr>
+	            <td>{{ row.subject_name }}</td>
+	            <td>{{ row.subject_code }}</td>
+	            <td>{{ row.present_classes }}</td>
+	            <td>{{ row.absent_classes }}</td>
+	            <td>{{ row.leave_classes }}</td>
+	            <td>{{ row.total_classes }}</td>
+	            <td>{{ row.attendance_pct }}%</td>
+	          </tr>
+	          {% else %}
+	          <tr><td colspan="7">No attendance records yet.</td></tr>
+	          {% endfor %}
+	        </tbody>
+	      </table>
+
+	      <table style="margin-top:16px;">
+	        <thead>
+	          <tr>
+	            <th>Date</th>
+	            <th>Period</th>
+	            <th>Subject</th>
+	            <th>Status</th>
+	            <th>Marked By</th>
+	            <th>Remarks</th>
+	          </tr>
+	        </thead>
+	        <tbody>
+	          {% for row in attendance_log_rows %}
+	          <tr>
+	            <td>{{ row.attendance_date }}</td>
+	            <td>{{ row.period_no }}</td>
+	            <td>{{ row.subject_name }}</td>
+	            <td>{{ row.status }}</td>
+	            <td>{{ row.marked_by or "-" }}</td>
+	            <td>{{ row.remarks or "-" }}</td>
+	          </tr>
+	          {% else %}
+	          <tr><td colspan="6">No recent attendance sessions yet.</td></tr>
+	          {% endfor %}
+	        </tbody>
+	      </table>
+	    </div>
 
     <div id="fees" class="tab-panel">
       <div class="summary-row">

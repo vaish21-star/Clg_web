@@ -77,7 +77,26 @@
             </td>
               <td class="no-print">
               {% if student.status != "ACTIVE" %}
-                <a href="{{ url_for('approve_student', admission_id=student.admission_id, status=status, q=q, branch=branch) }}" class="table-link approve-link">Approve</a>
+                <form action="{{ url_for('approve_student', admission_id=student.admission_id) }}" method="post" style="display:flex; gap:6px; align-items:center; justify-content:center;">
+                  <input type="hidden" name="status" value="{{ status }}">
+                  <input type="hidden" name="q" value="{{ q }}">
+                  <input type="hidden" name="branch" value="{{ branch }}">
+                  {% if can_set_alloted_category %}
+                  <select name="alloted_category" class="preserve-case">
+                    <option value="">Alloted Category</option>
+                    <option value="1G" {% if student.alloted_category == "1G" %}selected{% endif %}>1G</option>
+                    <option value="SCG" {% if student.alloted_category == "SCG" %}selected{% endif %}>SCG</option>
+                    <option value="STG" {% if student.alloted_category == "STG" %}selected{% endif %}>STG</option>
+                    <option value="2AG" {% if student.alloted_category == "2AG" %}selected{% endif %}>2AG</option>
+                    <option value="2BG" {% if student.alloted_category == "2BG" %}selected{% endif %}>2BG</option>
+                    <option value="3AG" {% if student.alloted_category == "3AG" %}selected{% endif %}>3AG</option>
+                    <option value="3BG" {% if student.alloted_category == "3BG" %}selected{% endif %}>3BG</option>
+                    <option value="GM" {% if student.alloted_category == "GM" %}selected{% endif %}>GM</option>
+                    <option value="PENDING" {% if student.alloted_category == "PENDING" %}selected{% endif %}>PENDING</option>
+                  </select>
+                  {% endif %}
+                  <button type="submit" class="table-link approve-link" style="border:none; cursor:pointer;">Approve</button>
+                </form>
               {% else %}
                 <span class="status-text">Approved</span>
               {% endif %}

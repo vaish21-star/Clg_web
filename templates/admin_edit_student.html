@@ -32,8 +32,21 @@
       </select>
 
       <input type="text" name="caste_category" class="preserve-case" placeholder="Caste Category" value="{{ student.caste_category }}">
-      <input type="text" name="alloted_category" class="preserve-case" placeholder="Alloted Category" value="{{ student.alloted_category }}" {% if not can_set_alloted_category %}readonly{% endif %}>
-      {% if not can_set_alloted_category %}
+      {% if can_set_alloted_category %}
+      <select name="alloted_category" class="preserve-case">
+        <option value="">Alloted Category</option>
+        <option value="1G" {% if student.alloted_category == "1G" %}selected{% endif %}>1G</option>
+        <option value="SCG" {% if student.alloted_category == "SCG" %}selected{% endif %}>SCG</option>
+        <option value="STG" {% if student.alloted_category == "STG" %}selected{% endif %}>STG</option>
+        <option value="2AG" {% if student.alloted_category == "2AG" %}selected{% endif %}>2AG</option>
+        <option value="2BG" {% if student.alloted_category == "2BG" %}selected{% endif %}>2BG</option>
+        <option value="3AG" {% if student.alloted_category == "3AG" %}selected{% endif %}>3AG</option>
+        <option value="3BG" {% if student.alloted_category == "3BG" %}selected{% endif %}>3BG</option>
+        <option value="GM" {% if student.alloted_category == "GM" %}selected{% endif %}>GM</option>
+        <option value="PENDING" {% if student.alloted_category == "PENDING" %}selected{% endif %}>PENDING</option>
+      </select>
+      {% else %}
+      <input type="text" name="alloted_category" class="preserve-case" placeholder="Alloted Category" value="{{ student.alloted_category }}" readonly>
       <small>Only Admin/Management can update Alloted Category.</small>
       {% endif %}
       <input type="text" name="register_number" class="preserve-case" placeholder="Qualifying Exam Reg No" value="{{ student.register_number }}">

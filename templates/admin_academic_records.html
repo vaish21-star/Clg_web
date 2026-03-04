@@ -25,33 +25,66 @@
         <b>{{ student.student_name }}</b> ({{ student.admission_id }}) - {{ student.branch }}
       </div>
 
+      <div style="margin:10px 0 12px;padding:10px;border:1px solid #d5e1f7;background:#f7fbff;border-radius:8px;color:#24385f;">
+        <b>Subject Selection</b>
+        <div class="applications-filters" style="grid-template-columns:repeat(5,minmax(0,1fr)); margin-top:8px;">
+          <select id="ar-branch">
+            {% for b in branch_options %}
+              <option value="{{ b }}" {% if b == student.branch %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+          <select id="ar-semester">
+            {% for sem_no in [1,2,3,4,5,6] %}
+              <option value="{{ sem_no }}" {% if default_semester|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>
+            {% endfor %}
+          </select>
+          <select id="ar-subject">
+            <option value="">Select Subject</option>
+          </select>
+          <input type="text" id="ar-subject-type" placeholder="Subject Type" readonly>
+          <select id="ar-series">
+            <option value="">Series</option>
+            {% for s in series_options %}
+              <option value="{{ s }}" {% if s == "C20 SERIES" %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="applications-filters" style="grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:8px;">
+          <input type="text" id="ar-course-code" placeholder="Course Code" readonly>
+          <input type="text" id="ar-subject-name" placeholder="Subject Name" readonly>
+        </div>
+      </div>
+
       <div class="applications-filters" style="grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:10px;">
-        <form method="post">
+        <form method="post" class="academic-save-form">
           <input type="hidden" name="action" value="subject">
           <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
-          <input name="semester_no" type="number" min="1" max="6" placeholder="Sem" required>
-          <input name="subject_code" placeholder="Subject Code" required>
-          <input name="subject_name" placeholder="Subject Name" required>
+          <input type="hidden" name="semester_no" class="js-semester-field">
+          <input type="hidden" name="series" class="js-series-field">
+          <input type="hidden" name="subject_code" class="js-subject-code-field">
+          <input type="hidden" name="subject_name" class="js-subject-name-field">
           <input name="internal_max" type="number" placeholder="Internal Max (25)" value="25">
           <input name="external_max" type="number" placeholder="External Max (75)" value="75">
           <button type="submit" class="table-btn">Save Subject</button>
         </form>
 
-        <form method="post">
+        <form method="post" class="academic-save-form">
           <input type="hidden" name="action" value="marks">
           <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
-          <input name="semester_no" type="number" min="1" max="6" placeholder="Sem" required>
-          <input name="subject_code" placeholder="Subject Code" required>
+          <input type="hidden" name="semester_no" class="js-semester-field">
+          <input type="hidden" name="series" class="js-series-field">
+          <input type="hidden" name="subject_code" class="js-subject-code-field">
           <input name="internal_marks" type="number" step="0.01" placeholder="Internal Marks" required>
           <input name="external_marks" type="number" step="0.01" placeholder="External Marks" required>
           <button type="submit" class="table-btn">Save Marks</button>
         </form>
 
-        <form method="post">
+        <form method="post" class="academic-save-form">
           <input type="hidden" name="action" value="attendance">
           <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
-          <input name="semester_no" type="number" min="1" max="6" placeholder="Sem" required>
-          <input name="subject_code" placeholder="Subject Code" required>
+          <input type="hidden" name="semester_no" class="js-semester-field">
+          <input type="hidden" name="series" class="js-series-field">
+          <input type="hidden" name="subject_code" class="js-subject-code-field">
           <input name="total_classes" type="number" min="0" placeholder="Total Classes" required>
           <input name="present_classes" type="number" min="0" placeholder="Present Classes" required>
           <button type="submit" class="table-btn">Save Attendance</button>
@@ -92,5 +125,98 @@
 
     <a href="/admin" class="link">Back to Dashboard</a>
   </div>
+
+  {% if student %}
+  <script>
+    var academicSubjectRows = [];
+    function getAcademicSelected(){
+      var subEl = document.getElementById("ar-subject");
+      var found = academicSubjectRows.find(function(r){
+        return String(r.id || "") === String(subEl && subEl.value ? subEl.value : "");
+      });
+      return found || null;
+    }
+    function syncAcademicSubjectMeta(){
+      var selected = getAcademicSelected();
+      var codeEl = document.getElementById("ar-course-code");
+      var typeEl = document.getElementById("ar-subject-type");
+      var nameEl = document.getElementById("ar-subject-name");
+      if(codeEl) codeEl.value = selected ? (selected.course_code || "") : "";
+      if(typeEl) typeEl.value = selected ? (selected.subject_type || "") : "";
+      if(nameEl) nameEl.value = selected ? (selected.subject_name || "") : "";
+    }
+    async function loadAcademicSubjects(){
+      var branch = (document.getElementById("ar-branch").value || "").trim();
+      var semester = (document.getElementById("ar-semester").value || "").trim();
+      var series = (document.getElementById("ar-series").value || "").trim();
+      var subEl = document.getElementById("ar-subject");
+      var prev = subEl.value || "";
+      academicSubjectRows = [];
+      subEl.innerHTML = "";
+      if(!branch || !semester || !series){
+        var optEmpty = document.createElement("option");
+        optEmpty.value = "";
+        optEmpty.textContent = "Select Branch + Semester + Series";
+        subEl.appendChild(optEmpty);
+        syncAcademicSubjectMeta();
+        return;
+      }
+
+      try{
+        var res = await fetch("/admin/api/subjects?branch=" + encodeURIComponent(branch) + "&semester=" + encodeURIComponent(semester) + "&series=" + encodeURIComponent(series));
+        var data = await res.json();
+        academicSubjectRows = data.subjects || [];
+      }catch(_err){
+        academicSubjectRows = [];
+      }
+
+      var base = document.createElement("option");
+      base.value = "";
+      base.textContent = academicSubjectRows.length ? "Select Subject" : "No subjects found";
+      subEl.appendChild(base);
+      academicSubjectRows.forEach(function(row){
+        var opt = document.createElement("option");
+        opt.value = row.id;
+        opt.textContent = row.label || ((row.subject_name || "") + " (" + (row.course_code || "") + ")");
+        subEl.appendChild(opt);
+      });
+      if(prev && academicSubjectRows.some(function(r){ return String(r.id) === String(prev); })){
+        subEl.value = prev;
+      } else {
+        subEl.value = "";
+      }
+      syncAcademicSubjectMeta();
+    }
+
+    document.getElementById("ar-branch").addEventListener("change", loadAcademicSubjects);
+    document.getElementById("ar-semester").addEventListener("change", loadAcademicSubjects);
+    document.getElementById("ar-series").addEventListener("change", loadAcademicSubjects);
+    document.getElementById("ar-subject").addEventListener("change", syncAcademicSubjectMeta);
+
+    document.querySelectorAll(".academic-save-form").forEach(function(form){
+      form.addEventListener("submit", function(e){
+        var selected = getAcademicSelected();
+        if(!selected){
+          e.preventDefault();
+          alert("Please select a valid subject.");
+          return;
+        }
+        var sem = (document.getElementById("ar-semester").value || "").trim();
+        var series = (document.getElementById("ar-series").value || "").trim();
+        if(!series){
+          e.preventDefault();
+          alert("Please select series.");
+          return;
+        }
+        form.querySelectorAll(".js-semester-field").forEach(function(el){ el.value = sem; });
+        form.querySelectorAll(".js-series-field").forEach(function(el){ el.value = series; });
+        form.querySelectorAll(".js-subject-code-field").forEach(function(el){ el.value = selected.course_code || ""; });
+        form.querySelectorAll(".js-subject-name-field").forEach(function(el){ el.value = selected.subject_name || ""; });
+      });
+    });
+
+    loadAcademicSubjects();
+  </script>
+  {% endif %}
 </body>
 </html>

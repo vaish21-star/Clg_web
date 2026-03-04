@@ -59,6 +59,14 @@
           <a class="link" href="/admin/academic-records">Open</a>
         </div>
 
+        {% if not is_staff or is_hod_staff %}
+        <div class="box">
+          <h3>Subject Master</h3>
+          <p>Manage branch/semester subjects and course codes</p>
+          <a class="link" href="/admin/subject-master">Open</a>
+        </div>
+        {% endif %}
+
         <div class="box">
           <h3>Attendance</h3>
           <p>Mark and manage student attendance</p>
@@ -86,10 +94,10 @@
         </div>
 
         {% if not is_staff or is_hod_staff or is_management_staff %}
-        <div class="box employee-box">
+        <div class="box">
           <h3>Employee Details</h3>
           <p>View and manage staff in table format</p>
-          <a class="link employee-open-link" href="/admin/employees">Open</a>
+          <a class="link" href="/admin/employees">Open</a>
         </div>
         {% endif %}
 

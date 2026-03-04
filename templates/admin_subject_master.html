@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Subject Master | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+  <div class="card applications-page">
+    <h2>Subject Master</h2>
+    <p class="subtitle">Manage subjects by branch, semester, and series</p>
+
+    {% if msg %}
+      <div style="background:#eef4ff;border:1px solid #c7d7f7;color:#1d3e73;padding:10px;border-radius:8px;margin-bottom:12px;">
+        {{ msg }}
+      </div>
+    {% endif %}
+
+    <form method="get" action="/admin/subject-master" class="applications-filters no-print" style="margin-bottom:12px;">
+      <select name="branch">
+        <option value="">All Branches</option>
+        {% for b in branch_options %}
+          <option value="{{ b }}" {% if branch_filter == b %}selected{% endif %}>{{ b }}</option>
+        {% endfor %}
+      </select>
+      <select name="semester">
+        <option value="">All Semesters</option>
+        {% for sem_no in [1,2,3,4,5,6] %}
+          <option value="{{ sem_no }}" {% if semester_filter|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>
+        {% endfor %}
+      </select>
+      <select name="series">
+        <option value="">All Series</option>
+        {% for s in series_options %}
+          <option value="{{ s }}" {% if series_filter == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="table-btn">Filter</button>
+    </form>
+
+    {% if can_manage_series %}
+    <div style="margin:10px 0 12px;padding:10px;border:1px solid #d5e1f7;background:#f7fbff;border-radius:8px;color:#24385f;">
+      <b>Add Series</b>
+      <form method="post" class="applications-filters" style="grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:8px;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="add_series">
+        <select name="series">
+          <option value="">Pick Existing (Optional)</option>
+          {% for s in series_options %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="custom_series" class="preserve-case" placeholder="New Series (example: C30 SERIES)">
+        <button type="submit" class="table-btn">Save Series</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <div style="margin:10px 0 12px;padding:10px;border:1px solid #d5e1f7;background:#f7fbff;border-radius:8px;color:#24385f;">
+      <b>Add / Update Subject</b>
+      <form method="post" class="applications-filters" style="grid-template-columns:repeat(8,minmax(0,1fr)); margin-top:8px;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="add">
+        <select name="branch" required>
+          <option value="">Branch</option>
+          {% for b in branch_options %}
+            <option value="{{ b }}">{{ b }}</option>
+          {% endfor %}
+        </select>
+        <select name="semester" required>
+          <option value="">Semester</option>
+          {% for sem_no in [1,2,3,4,5,6] %}
+            <option value="{{ sem_no }}">SEM {{ sem_no }}</option>
+          {% endfor %}
+        </select>
+        <select name="series" required>
+          <option value="">Series</option>
+          {% for s in series_options %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="custom_series" class="preserve-case" placeholder="Or Add Series">
+        <input type="text" name="subject_name" class="preserve-case" placeholder="Subject Name" required>
+        <input type="text" name="course_code" class="preserve-case" placeholder="Course Code" required>
+        <select name="subject_type" required>
+          {% for t in subject_type_options %}
+            <option value="{{ t }}">{{ t }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="table-btn">Add Subject</button>
+      </form>
+    </div>
+
+    <div class="applications-table-wrap">
+      <table class="applications-table" style="min-width:1100px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Branch</th>
+            <th>Semester</th>
+            <th>Series</th>
+            <th>Subject Name</th>
+            <th>Course Code</th>
+            <th>Type</th>
+            <th>Edit</th>
+            {% if can_delete_subject %}<th>Delete</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in subjects %}
+          <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.branch }}</td>
+            <td>{{ row.semester }}</td>
+            <td>{{ row.series }}</td>
+            <td>{{ row.subject_name }}</td>
+            <td>{{ row.course_code }}</td>
+            <td>{{ row.subject_type }}</td>
+            <td>
+              <details>
+                <summary class="table-link" style="cursor:pointer;">Edit</summary>
+                <form method="post" style="display:grid;gap:6px;min-width:260px;padding-top:8px;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="subject_id" value="{{ row.id }}">
+                  <select name="branch" required>
+                    {% for b in branch_options %}
+                      <option value="{{ b }}" {% if row.branch == b %}selected{% endif %}>{{ b }}</option>
+                    {% endfor %}
+                  </select>
+                  <select name="semester" required>
+                    {% for sem_no in [1,2,3,4,5,6] %}
+                      <option value="{{ sem_no }}" {% if row.semester|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>
+                    {% endfor %}
+                  </select>
+                  <select name="series" required>
+                    {% for s in series_options %}
+                      <option value="{{ s }}" {% if row.series == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="text" name="custom_series" class="preserve-case" placeholder="Or Add Series">
+                  <input type="text" name="subject_name" class="preserve-case" value="{{ row.subject_name }}" required>
+                  <input type="text" name="course_code" class="preserve-case" value="{{ row.course_code }}" required>
+                  <select name="subject_type" required>
+                    {% for t in subject_type_options %}
+                      <option value="{{ t }}" {% if row.subject_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="table-btn">Update</button>
+                </form>
+              </details>
+            </td>
+            {% if can_delete_subject %}
+              <td>
+                <form method="post" onsubmit="return confirm('Delete this subject?');">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="subject_id" value="{{ row.id }}">
+                  <button type="submit" class="table-btn reject-btn-sm">Delete</button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="{% if can_delete_subject %}9{% else %}8{% endif %}">No subjects found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <a href="/admin" class="link">Back to Dashboard</a>
+  </div>
+</body>
+</html>

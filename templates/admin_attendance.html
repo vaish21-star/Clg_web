@@ -424,16 +424,26 @@
       <form method="get" class="attendance-filters">
         <input type="month" name="month" value="{{ filters.month }}">
         <input type="date" name="attendance_date" value="{{ filters.attendance_date }}">
-        <input type="text" name="subject" class="preserve-case" placeholder="Subject (Ex: Mathematics)" value="{{ filters.subject }}">
+        <select name="subject" id="attendance-subject">
+          <option value="{{ filters.subject }}">{{ filters.subject if filters.subject else "Select Subject" }}</option>
+        </select>
+        <input type="text" id="attendance-course-code" placeholder="Course Code" value="" readonly>
+        <input type="text" id="attendance-subject-type" placeholder="Subject Type" value="" readonly>
         <input type="number" min="1" max="12" name="period_no" value="{{ filters.period_no }}">
         <input type="text" name="q" class="preserve-case" placeholder="Search student" value="{{ filters.q }}">
         {% if is_staff %}
           <input type="text" value="{{ staff_department }}" readonly>
-          <input type="hidden" name="branch" value="{{ staff_department }}">
+          <input type="hidden" id="attendance-branch" name="branch" value="{{ staff_department }}">
         {% else %}
-          <select name="branch"><option value="">All Branches</option>{% for b in branches %}<option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>{% endfor %}</select>
+          <select name="branch" id="attendance-branch"><option value="">All Branches</option>{% for b in branches %}<option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>{% endfor %}</select>
         {% endif %}
-        <select name="semester"><option value="">All Semesters</option>{% for sem_no in [1,2,3,4,5,6] %}<option value="{{ sem_no }}" {% if filters.semester|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>{% endfor %}</select>
+        <select name="semester" id="attendance-semester"><option value="">All Semesters</option>{% for sem_no in [1,2,3,4,5,6] %}<option value="{{ sem_no }}" {% if filters.semester|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>{% endfor %}</select>
+        <select name="series" id="attendance-series">
+          <option value="">Series</option>
+          {% for s in series_options %}
+            <option value="{{ s }}" {% if filters.series == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
         <button type="submit">Load Students</button>
       </form>
     </section>
@@ -490,9 +500,9 @@
 
     <section class="toolbar">
       <span class="chip">Students: {{ summary.total_students }}</span>
-      <a class="chip" href="/admin/attendance/blank-sheet/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&q={{ filters.q|urlencode }}">Blank Sheet</a>
-      <a class="chip" href="/admin/attendance/daywise/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&q={{ filters.q|urlencode }}">Day-wise Excel</a>
-      <a class="chip" href="/admin/attendance/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&q={{ filters.q|urlencode }}">Full Register Excel</a>
+      <a class="chip" href="/admin/attendance/blank-sheet/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&series={{ filters.series|urlencode }}&q={{ filters.q|urlencode }}">Blank Sheet</a>
+      <a class="chip" href="/admin/attendance/daywise/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&series={{ filters.series|urlencode }}&q={{ filters.q|urlencode }}">Day-wise Excel</a>
+      <a class="chip" href="/admin/attendance/export?month={{ filters.month }}&attendance_date={{ filters.attendance_date }}&subject={{ filters.subject|urlencode }}&period_no={{ filters.period_no }}&branch={{ filters.branch|urlencode }}&semester={{ filters.semester }}&series={{ filters.series|urlencode }}&q={{ filters.q|urlencode }}">Full Register Excel</a>
       <input id="attendance-live-search" class="chip search" type="text" placeholder="Search by student name or reg no">
     </section>
 
@@ -504,6 +514,7 @@
       <input type="hidden" name="period_no" value="{{ filters.period_no }}">
       <input type="hidden" name="branch" value="{{ filters.branch }}">
       <input type="hidden" name="semester" value="{{ filters.semester }}">
+      <input type="hidden" name="series" value="{{ filters.series }}">
       <input type="hidden" name="q" value="{{ filters.q }}">
       <input type="hidden" name="bulk_status" id="bulk-status-field" value="">
 
@@ -595,6 +606,75 @@
   </div>
 
   <script>
+    var attendanceSubjectRows = [];
+    function currentAttendanceBranch(){
+      var branchEl = document.getElementById("attendance-branch");
+      return branchEl ? (branchEl.value || "").trim() : "";
+    }
+    function currentAttendanceSemester(){
+      var semEl = document.getElementById("attendance-semester");
+      return semEl ? (semEl.value || "").trim() : "";
+    }
+    function currentAttendanceSeries(){
+      var seriesEl = document.getElementById("attendance-series");
+      return seriesEl ? (seriesEl.value || "").trim() : "";
+    }
+    function syncAttendanceSubjectMeta(){
+      var subEl = document.getElementById("attendance-subject");
+      var codeEl = document.getElementById("attendance-course-code");
+      var typeEl = document.getElementById("attendance-subject-type");
+      if(!subEl || !codeEl || !typeEl) return;
+      var selected = attendanceSubjectRows.find(function(r){ return (r.subject_name || "") === (subEl.value || ""); });
+      codeEl.value = selected ? (selected.course_code || "") : "";
+      typeEl.value = selected ? (selected.subject_type || "") : "";
+    }
+    async function loadAttendanceSubjects(){
+      var subEl = document.getElementById("attendance-subject");
+      if(!subEl) return;
+      var prev = (subEl.value || "").trim();
+      var branch = currentAttendanceBranch();
+      var semester = currentAttendanceSemester();
+      var series = currentAttendanceSeries();
+
+      subEl.innerHTML = "";
+      attendanceSubjectRows = [];
+      if(!branch || !semester || !series){
+        var emptyOpt = document.createElement("option");
+        emptyOpt.value = "";
+        emptyOpt.textContent = "Select Branch + Semester + Series";
+        subEl.appendChild(emptyOpt);
+        syncAttendanceSubjectMeta();
+        return;
+      }
+
+      try{
+        var res = await fetch("/admin/api/subjects?branch=" + encodeURIComponent(branch) + "&semester=" + encodeURIComponent(semester) + "&series=" + encodeURIComponent(series));
+        var data = await res.json();
+        attendanceSubjectRows = data.subjects || [];
+      }catch(_err){
+        attendanceSubjectRows = [];
+      }
+
+      var baseOpt = document.createElement("option");
+      baseOpt.value = "";
+      baseOpt.textContent = attendanceSubjectRows.length ? "Select Subject" : "No subjects found";
+      subEl.appendChild(baseOpt);
+      attendanceSubjectRows.forEach(function(row){
+        var opt = document.createElement("option");
+        opt.value = row.subject_name || "";
+        opt.textContent = row.label || ((row.subject_name || "") + " (" + (row.course_code || "") + ")");
+        subEl.appendChild(opt);
+      });
+
+      if(prev){
+        var exists = attendanceSubjectRows.some(function(r){ return (r.subject_name || "") === prev; });
+        subEl.value = exists ? prev : "";
+      } else {
+        subEl.value = "";
+      }
+      syncAttendanceSubjectMeta();
+    }
+
     function showToast(msg){
       var t=document.createElement("div");
       t.className="toast";
@@ -700,6 +780,15 @@
       pts.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle="#d7f6ff";ctx.fill();});
     }
     document.querySelectorAll(".status-select").forEach(function(el){el.addEventListener("change",function(){syncChips(el);});});
+    var attendanceBranchEl = document.getElementById("attendance-branch");
+    var attendanceSemesterEl = document.getElementById("attendance-semester");
+    var attendanceSeriesEl = document.getElementById("attendance-series");
+    var attendanceSubjectEl = document.getElementById("attendance-subject");
+    if(attendanceBranchEl && attendanceBranchEl.tagName === "SELECT"){attendanceBranchEl.addEventListener("change", loadAttendanceSubjects);}
+    if(attendanceSemesterEl){attendanceSemesterEl.addEventListener("change", loadAttendanceSubjects);}
+    if(attendanceSeriesEl){attendanceSeriesEl.addEventListener("change", loadAttendanceSubjects);}
+    if(attendanceSubjectEl){attendanceSubjectEl.addEventListener("change", syncAttendanceSubjectMeta);}
+    loadAttendanceSubjects();
     bindChipClicks(); syncAllChips(); initSearch(); initTrend();
   </script>
 </body>
