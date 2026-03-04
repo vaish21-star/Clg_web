@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Student | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card add-employee-card">
+    <h2>Edit Student</h2>
+    <p class="subtitle">Update student details</p>
+
+    <form method="post" class="add-employee-form">
+      <input type="text" name="student_name" class="preserve-case" placeholder="Student Name" value="{{ student.student_name }}" required>
+
+      <select name="branch" class="preserve-case" required>
+        <option value="Automobile Engineering" {% if student.branch == "Automobile Engineering" %}selected{% endif %}>Automobile Engineering</option>
+        <option value="Computer Science and Engineering" {% if student.branch == "Computer Science and Engineering" %}selected{% endif %}>Computer Science and Engineering</option>
+        <option value="Electronics and Communication Engineering" {% if student.branch == "Electronics and Communication Engineering" %}selected{% endif %}>Electronics and Communication Engineering</option>
+        <option value="Mechanical Engineering" {% if student.branch == "Mechanical Engineering" %}selected{% endif %}>Mechanical Engineering</option>
+      </select>
+
+      <input type="text" name="mobile" class="preserve-case" placeholder="Mobile Number" value="{{ student.mobile }}" required>
+      <input type="text" name="college_reg_no" class="preserve-case" placeholder="College Reg No" value="{{ student.college_reg_no }}">
+
+      <select name="gender" class="preserve-case">
+        <option value="">Select Gender</option>
+        <option value="Male" {% if student.gender == "Male" %}selected{% endif %}>Male</option>
+        <option value="Female" {% if student.gender == "Female" %}selected{% endif %}>Female</option>
+        <option value="Other" {% if student.gender == "Other" %}selected{% endif %}>Other</option>
+      </select>
+
+      <input type="text" name="caste_category" class="preserve-case" placeholder="Caste Category" value="{{ student.caste_category }}">
+      <input type="text" name="alloted_category" class="preserve-case" placeholder="Alloted Category" value="{{ student.alloted_category }}">
+      <input type="text" name="register_number" class="preserve-case" placeholder="Qualifying Exam Reg No" value="{{ student.register_number }}">
+
+      <button type="submit" class="save-employee-btn">Update Student</button>
+    </form>
+
+    <a class="link" href="/admin/student-details">Back to Student Details</a>
+  </div>
+</body>
+</html>

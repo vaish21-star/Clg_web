@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>SVP Login Portal</h2>
+    <p class="subtitle">Sri Venkateshwara Polytechnic</p>
+
+    <form method="post">
+      <select name="role">
+        <option value="student">Student Login</option>
+        <option value="admin">Admin Login</option>
+      </select>
+
+      <input type="text" name="username" class="preserve-case" placeholder="Admission ID / Username" required autocapitalize="off" autocorrect="off" spellcheck="false">
+
+      <div class="password-wrapper">
+        <input type="password" name="password" id="login_password" class="preserve-case" placeholder="Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="current-password">
+        <button type="button" id="toggleLoginPasswordBtn" class="toggle-password" onclick="togglePassword('login_password', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+
+      <button type="submit">Login</button>
+    </form>
+
+    <a href="/home" class="link">Home</a>
+  </div>
+
+  <script>
+    function togglePassword(fieldId, toggleButton) {
+      const passwordField = document.getElementById(fieldId);
+      if (!passwordField) return;
+
+      if (passwordField.type === "password") {
+        passwordField.type = "text";
+        toggleButton.setAttribute("aria-label", "Hide password");
+        toggleButton.setAttribute("title", "Hide password");
+      } else {
+        passwordField.type = "password";
+        toggleButton.setAttribute("aria-label", "Show password");
+        toggleButton.setAttribute("title", "Show password");
+      }
+    }
+  </script>
+</body>
+</html>

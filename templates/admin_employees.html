@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Employee Details | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="dashboard employee-page">
+    <div class="header">
+      <h2>Employee Details</h2>
+      <p class="subtitle">Teaching, non-teaching and helpers</p>
+    </div>
+
+    <div class="table-actions">
+      <a class="link action-link add-employee-link" href="/admin/employees/add">{% if is_staff %}Add Employee ({{ staff_department }}){% else %}Add Employee{% endif %}</a>
+      <a class="link action-link back-dashboard-link" href="/admin">Back to Dashboard</a>
+    </div>
+
+    <div class="employee-filters-card">
+      <form method="get" class="employee-filters">
+        <input
+          type="text"
+          name="name"
+          class="preserve-case"
+          placeholder="Search by Name"
+          value="{{ filters.name }}"
+          list="employee-name-suggestions"
+        >
+        <datalist id="employee-name-suggestions">
+          {% for employee_name in employee_names %}
+            <option value="{{ employee_name }}"></option>
+          {% endfor %}
+        </datalist>
+
+        <select name="employee_type">
+          <option value="">All Staff Types</option>
+          <option value="TEACHING" {% if filters.employee_type == "TEACHING" %}selected{% endif %}>Teaching Staff</option>
+          <option value="NON-TEACHING" {% if filters.employee_type == "NON-TEACHING" %}selected{% endif %}>Non-Teaching Staff</option>
+          <option value="HELPER" {% if filters.employee_type == "HELPER" %}selected{% endif %}>Helpers</option>
+        </select>
+
+        {% if is_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="department" value="{{ staff_department }}">
+        {% else %}
+          <select name="department">
+            <option value="">All Branches / Departments</option>
+            {% for dept in departments %}
+              <option value="{{ dept }}" {% if filters.department == dept %}selected{% endif %}>{{ dept }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+
+        <select name="hod">
+          <option value="">All Designations</option>
+          <option value="yes" {% if filters.hod == "yes" %}selected{% endif %}>HOD Only</option>
+        </select>
+
+        <select name="sort_by">
+          <option value="employee_name" {% if filters.sort_by == "employee_name" %}selected{% endif %}>Sort by Name</option>
+          <option value="department" {% if filters.sort_by == "department" %}selected{% endif %}>Sort by Department</option>
+          <option value="designation" {% if filters.sort_by == "designation" %}selected{% endif %}>Sort by Designation</option>
+        </select>
+
+        <button type="submit">Apply</button>
+      </form>
+    </div>
+
+    <div class="employee-table-card">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Employee Name</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Mobile No</th>
+              <th>Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in employees %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ emp.employee_name }}</td>
+                <td>{{ emp.department }}</td>
+                <td>{{ emp.designation }}</td>
+                <td>{{ emp.mobile_no }}</td>
+                <td>
+                  <a class="edit-employee-link" href="/admin/employees/edit/{{ emp.id }}" title="Edit Employee" aria-label="Edit Employee">&#9998;</a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6">No employee records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

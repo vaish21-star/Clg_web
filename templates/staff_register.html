@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Staff Registration | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>Staff Registration</h2>
+    <p class="subtitle">Verify with Gmail OTP</p>
+    {% if error %}<p style="color:#c62828">{{ error }}</p>{% endif %}
+    {% if message %}<p style="color:#1b5e20">{{ message }}</p>{% endif %}
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="employee_name" placeholder="Employee Name" required>
+      <select name="department" required>
+        <option value="">Select Department</option>
+        {% for d in departments %}
+          <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+      <select name="designation" required>
+        <option value="">Select Designation</option>
+        <option value="HOD">HOD</option>
+        <option value="Staff">Staff</option>
+      </select>
+      <input type="email" name="email" placeholder="Gmail (example@gmail.com)" required>
+      <div class="password-wrapper">
+        <input type="password" id="staff_register_password" name="password" class="preserve-case" placeholder="Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="new-password">
+        <button type="button" class="toggle-password" onclick="togglePassword('staff_register_password', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+      <div class="password-wrapper">
+        <input type="password" id="staff_register_confirm_password" name="confirm_password" class="preserve-case" placeholder="Confirm Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="new-password">
+        <button type="button" class="toggle-password" onclick="togglePassword('staff_register_confirm_password', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+      <button type="submit">Send OTP</button>
+    </form>
+    <a class="link" href="/login/staff">Back to Login</a>
+  </div>
+<script>
+  function togglePassword(fieldId, toggleButton) {
+    const passwordField = document.getElementById(fieldId);
+    if (!passwordField) return;
+
+    if (passwordField.type === "password") {
+      passwordField.type = "text";
+      toggleButton.setAttribute("aria-label", "Hide password");
+      toggleButton.setAttribute("title", "Hide password");
+    } else {
+      passwordField.type = "password";
+      toggleButton.setAttribute("aria-label", "Show password");
+      toggleButton.setAttribute("title", "Show password");
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Application | {{ student.admission_id }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <style>
+    :root {
+      --ink: #1f1f1f;
+      --muted: #363636;
+      --line: #2b2b2b;
+      --panel: #ffffff;
+      --soft: #f8f8f8;
+      --accent: #121212;
+    }
+
+    .app-shell {
+      width: min(1120px, 96%);
+      margin: 18px auto;
+      color: var(--ink);
+    }
+
+    .top-bar {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .sheet {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+      overflow: hidden;
+      font-family: "Times New Roman", Times, serif;
+    }
+
+    .sheet-head {
+      display: grid;
+      grid-template-columns: 1fr 140px;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      align-items: start;
+    }
+
+    .head-main {
+      text-align: center;
+    }
+
+    .head-main h1 {
+      margin: 0;
+      font-size: 44px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #101010;
+    }
+
+    .head-sub {
+      margin-top: 2px;
+      font-size: 22px;
+      color: var(--muted);
+    }
+
+    .head-note {
+      margin-top: 6px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #2d2d2d;
+    }
+
+    .official-rule {
+      height: 0;
+      border-top: 2px solid #1f1f1f;
+      margin-top: 8px;
+    }
+
+    .official-ref-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 10px 14px 6px 14px;
+      font-size: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .official-ref-right {
+      text-align: right;
+    }
+
+    .photo-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .photo-box img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #f0f4fb;
+    }
+
+    .meta-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--line);
+      background: var(--soft);
+    }
+
+    .meta-item {
+      padding: 10px 12px;
+      border-right: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .meta-item:last-child {
+      border-right: none;
+    }
+
+    .status-chip {
+      display: inline-block;
+      border: 1px solid #b7c6e4;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eef4ff;
+      color: #173b73;
+    }
+
+    .section {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section h3 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      color: #12315f;
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 40px;
+    }
+
+    .kv .k {
+      background: #f3f7ff;
+      padding: 9px 10px;
+      font-weight: 700;
+      font-size: 13px;
+      border-right: 1px solid var(--line);
+    }
+
+    .kv .v {
+      padding: 9px 10px;
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    .kv.full {
+      grid-column: 1 / -1;
+    }
+
+    .doc-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .doc-tag {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #c6d4ef;
+      background: #eef4ff;
+      color: #1a427a;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .docs-pages {
+      padding: 12px;
+    }
+
+    .docs-pages h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #12315f;
+    }
+
+    .doc-page {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+      background: #fff;
+    }
+
+    .doc-page h4 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: #132e58;
+    }
+
+    .doc-preview,
+    .doc-frame {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .doc-preview {
+      max-height: 900px;
+      object-fit: contain;
+    }
+
+    .doc-frame {
+      height: 900px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .signatures {
+      padding: 45px 14px 18px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      font-size: 13px;
+      border-top: 1px solid var(--line);
+    }
+
+    .sign-col {
+      text-align: center;
+    }
+
+    .sign-line {
+      border-top: 1px solid #222;
+      margin-bottom: 6px;
+    }
+
+    .official-footer {
+      border-top: 2px solid #222;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 8px 14px 12px 14px;
+      font-size: 13px;
+    }
+
+    .official-footer .right {
+      text-align: right;
+    }
+
+    @media (max-width: 900px) {
+      .sheet-head {
+        grid-template-columns: 1fr;
+      }
+      .photo-box {
+        max-width: 220px;
+        margin: 0 auto;
+      }
+      .meta-strip {
+        grid-template-columns: 1fr;
+      }
+      .meta-item {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+      .meta-item:last-child {
+        border-bottom: none;
+      }
+      .kv-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      @page { size: A4 portrait; margin: 10mm; }
+      body { background: #fff !important; display: block; padding: 0 !important; }
+      * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .no-print { display: none !important; }
+      .app-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+      }
+      .sheet {
+        border: 1px solid var(--line) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+      .sheet-head,
+      .official-ref-row,
+      .meta-strip,
+      .section,
+      .kv,
+      .photo-box,
+      .signatures {
+        page-break-inside: avoid;
+        break-inside: avoid-page;
+      }
+      .head-main h1 {
+        font-size: 36px;
+      }
+      .head-sub {
+        font-size: 20px;
+      }
+      .official-ref-row {
+        font-size: 14px;
+      }
+      .kv-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+      .kv .k,
+      .kv .v {
+        font-size: 12px;
+      }
+      .docs-pages {
+        display: block !important;
+        page-break-before: always;
+        padding: 0 !important;
+      }
+      .doc-page {
+        page-break-before: always;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 0 8px 0 !important;
+        background: transparent !important;
+      }
+      .doc-frame { height: 980px; }
+      .docs-pages h3,
+      .doc-page h4 {
+        display: none !important;
+      }
+      .doc-preview,
+      .doc-frame {
+        border: none !important;
+        border-radius: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="top-bar no-print">
+      <button type="button" class="btn primary" onclick="window.print()">Print / Save PDF</button>
+      <a href="/admin/download-all/{{ student.admission_id }}" class="btn secondary">Download Documents</a>
+      <a href="/admin/student-details" class="btn secondary">Back to Student Details</a>
+    </div>
+
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="head-main">
+          <h1>Sri Venkateshwara Polytechnic</h1>
+          <div class="head-sub">Department of {{ student.branch }}</div>
+          <div class="head-note">
+            (A Unit of Nehru Smaraka Vidya Kendra Trust, Bangalore)<br/>
+            Recognised by AICTE New Delhi and Govt. of Karnataka<br/>
+            Jangalpalya, Bannerghatta, Bengaluru - 560 083
+          </div>
+          <div class="official-rule"></div>
+        </div>
+        <div class="photo-box">
+          {% if docs.student_photo %}
+            <img src="{{ url_for('static', filename='uploads/' + docs.student_photo) }}" alt="Student Photo">
+          {% else %}
+            <img alt="Student Photo" style="opacity:0;">
+          {% endif %}
+          Passport Size Photo
+        </div>
+      </div>
+
+      <div class="official-ref-row">
+        <div><b>Ref. No.:</b> SVP/{{ student.branch }}/{{ student.admission_id }}</div>
+        <div class="official-ref-right"><b>Date:</b> {{ print_date }}</div>
+      </div>
+
+      <div class="meta-strip">
+        <div class="meta-item"><b>Admission ID:</b> {{ student.admission_id }}</div>
+        <div class="meta-item"><b>Applicant Name:</b> {{ student.student_name }}</div>
+        <div class="meta-item"><b>Status:</b> <span class="status-chip">{{ student.status }}</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Student Information</h3>
+        <div class="kv-grid">
+          <div class="kv"><div class="k">College Reg No</div><div class="v">{{ student.college_reg_no if student.college_reg_no else '-' }}</div></div>
+          <div class="kv"><div class="k">Branch</div><div class="v">{{ student.branch }}</div></div>
+          <div class="kv"><div class="k">Gender</div><div class="v">{{ personal.gender if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">DOB</div><div class="v">{{ personal.dob if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Mobile</div><div class="v">{{ personal.student_mobile if personal and personal.student_mobile else student.mobile }}</div></div>
+          <div class="kv"><div class="k">Email</div><div class="v">{{ personal.student_email if personal and personal.student_email else '-' }}</div></div>
+          <div class="kv"><div class="k">Caste</div><div class="v">{{ personal.caste_category if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Alloted Category</div><div class="v">{{ personal.alloted_category if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Religion</div><div class="v">{{ personal.religion if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Nationality</div><div class="v">{{ personal.indian_nationality if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Qualifying Exam</div><div class="v">{{ personal.qualifying_exam if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Qualifying Reg No</div><div class="v">{{ personal.register_number if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Year of Passing</div><div class="v">{{ personal.year_of_passing if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Admission Quota</div><div class="v">{{ personal.admission_quota if personal else '-' }}</div></div>
+          <div class="kv"><div class="k">Father</div><div class="v">{{ personal.father_name if personal else '-' }}{% if personal and personal.father_mobile %} ({{ personal.father_mobile }}){% endif %}</div></div>
+          <div class="kv"><div class="k">Mother</div><div class="v">{{ personal.mother_name if personal else '-' }}{% if personal and personal.mother_mobile %} ({{ personal.mother_mobile }}){% endif %}</div></div>
+          <div class="kv full"><div class="k">Residential Address</div><div class="v">{{ personal.residential_address if personal and personal.residential_address else '-' }}</div></div>
+          <div class="kv full"><div class="k">Permanent Address</div><div class="v">{{ personal.permanent_address if personal and personal.permanent_address else '-' }}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Document Numbers</h3>
+        <div class="kv-grid">
+          <div class="kv"><div class="k">Aadhaar Number</div><div class="v">{{ docs.aadhaar_number or '-' }}</div></div>
+          <div class="kv"><div class="k">Caste RD Number</div><div class="v">{{ docs.caste_rd_number or '-' }}</div></div>
+          <div class="kv"><div class="k">Income RD Number</div><div class="v">{{ docs.income_rd_number or '-' }}</div></div>
+          <div class="kv"><div class="k">Marks Card</div><div class="v">{{ 'Uploaded' if docs.marks_card_file else 'Not Uploaded' }}</div></div>
+        </div>
+
+        <div class="doc-tags no-print">
+          {% if docs.aadhaar_file %}<a class="doc-tag" target="_blank" href="{{ url_for('static', filename='uploads/' + docs.aadhaar_file) }}">Aadhaar</a>{% endif %}
+          {% if docs.caste_file %}<a class="doc-tag" target="_blank" href="{{ url_for('static', filename='uploads/' + docs.caste_file) }}">Caste</a>{% endif %}
+          {% if docs.income_file %}<a class="doc-tag" target="_blank" href="{{ url_for('static', filename='uploads/' + docs.income_file) }}">Income</a>{% endif %}
+          {% if docs.marks_card_file %}<a class="doc-tag" target="_blank" href="{{ url_for('static', filename='uploads/' + docs.marks_card_file) }}">Marks Card</a>{% endif %}
+          {% if not docs.aadhaar_file and not docs.caste_file and not docs.income_file and not docs.marks_card_file %}<span class="muted">No documents found</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="signatures">
+        <div class="sign-col">
+          <div class="sign-line"></div>
+          <div><b>Signature of Program Co-Ordinator</b></div>
+        </div>
+        <div class="sign-col">
+          <div class="sign-line"></div>
+          <div><b>Signature of Principal</b></div>
+        </div>
+      </div>
+
+      <div class="official-footer">
+        <div>E-mail ID: srivenkateshwara364@gmail.com</div>
+        <div class="right">Website: www.svpolytechnic.edu.in</div>
+      </div>
+
+      <div class="docs-pages">
+        <h3>Uploaded Document Pages</h3>
+
+        {% if docs.aadhaar_file %}
+        <div class="doc-page">
+          <h4>Aadhaar</h4>
+          {% if docs.aadhaar_file.lower().endswith('.pdf') %}
+            <iframe class="doc-frame" src="{{ url_for('static', filename='uploads/' + docs.aadhaar_file) }}"></iframe>
+          {% else %}
+            <img class="doc-preview" src="{{ url_for('static', filename='uploads/' + docs.aadhaar_file) }}" alt="Aadhaar">
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if docs.caste_file %}
+        <div class="doc-page">
+          <h4>Caste Certificate</h4>
+          {% if docs.caste_file.lower().endswith('.pdf') %}
+            <iframe class="doc-frame" src="{{ url_for('static', filename='uploads/' + docs.caste_file) }}"></iframe>
+          {% else %}
+            <img class="doc-preview" src="{{ url_for('static', filename='uploads/' + docs.caste_file) }}" alt="Caste Certificate">
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if docs.income_file %}
+        <div class="doc-page">
+          <h4>Income Certificate</h4>
+          {% if docs.income_file.lower().endswith('.pdf') %}
+            <iframe class="doc-frame" src="{{ url_for('static', filename='uploads/' + docs.income_file) }}"></iframe>
+          {% else %}
+            <img class="doc-preview" src="{{ url_for('static', filename='uploads/' + docs.income_file) }}" alt="Income Certificate">
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if docs.marks_card_file %}
+        <div class="doc-page">
+          <h4>Marks Card</h4>
+          {% if docs.marks_card_file.lower().endswith('.pdf') %}
+            <iframe class="doc-frame" src="{{ url_for('static', filename='uploads/' + docs.marks_card_file) }}"></iframe>
+          {% else %}
+            <img class="doc-preview" src="{{ url_for('static', filename='uploads/' + docs.marks_card_file) }}" alt="Marks Card">
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+

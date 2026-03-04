@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fees Management | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="dashboard employee-page student-list-page">
+    <div class="header">
+      <h2>SRI VENKATESHWARA POLYTECHNIC</h2>
+      <p class="subtitle">Fees Ledger - Current Semester / {{ default_academic_year }}</p>
+    </div>
+
+    <div class="table-actions">
+      <a class="link action-link back-dashboard-link no-print" href="/admin">Back to Dashboard</a>
+    </div>
+
+    {% if msg %}
+      <div class="employee-filters-card" style="margin-bottom: 10px;">
+        <b>{{ msg }}</b>
+      </div>
+    {% endif %}
+
+    <div class="employee-filters-card">
+      <form method="get" class="employee-filters student-filters no-print">
+        <input
+          type="text"
+          name="q"
+          class="preserve-case"
+          placeholder="Search by name / admission ID / reg no"
+          value="{{ filters.q }}"
+        >
+
+        {% if is_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="branch" value="{{ staff_department }}">
+        {% else %}
+          <select name="branch">
+            <option value="">All Branches</option>
+            {% for b in branches %}
+              <option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+
+        <select name="sem">
+          <option value="">All Semesters</option>
+          {% for sem_no in [1,2,3,4,5,6] %}
+            <option value="{{ sem_no }}" {% if filters.sem == sem_no|string %}selected{% endif %}>Sem {{ sem_no }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="payment_state">
+          <option value="">All Fee States</option>
+          <option value="PAID" {% if filters.payment_state == "PAID" %}selected{% endif %}>PAID</option>
+          <option value="PENDING" {% if filters.payment_state == "PENDING" %}selected{% endif %}>PENDING</option>
+          <option value="NOT PAID" {% if filters.payment_state == "NOT PAID" %}selected{% endif %}>NOT PAID</option>
+        </select>
+
+        <select name="sort_by">
+          <option value="name" {% if filters.sort_by == "name" %}selected{% endif %}>Sort: Name</option>
+          <option value="admission_id" {% if filters.sort_by == "admission_id" %}selected{% endif %}>Sort: Admission ID</option>
+          <option value="branch" {% if filters.sort_by == "branch" %}selected{% endif %}>Sort: Branch</option>
+          <option value="sem_asc" {% if filters.sort_by == "sem_asc" %}selected{% endif %}>Sort: Sem Asc</option>
+          <option value="sem_desc" {% if filters.sort_by == "sem_desc" %}selected{% endif %}>Sort: Sem Desc</option>
+          <option value="balance_desc" {% if filters.sort_by == "balance_desc" %}selected{% endif %}>Sort: Balance High-Low</option>
+          <option value="balance_asc" {% if filters.sort_by == "balance_asc" %}selected{% endif %}>Sort: Balance Low-High</option>
+        </select>
+
+        <button type="submit">Apply</button>
+        <a class="link" href="/admin/fees/export?q={{ filters.q }}&branch={{ filters.branch }}&sem={{ filters.sem }}&payment_state={{ filters.payment_state }}&sort_by={{ filters.sort_by }}">Export Fees (Excel)</a>
+      </form>
+    </div>
+
+    {% if can_manage_fees %}
+    <div class="employee-filters-card no-print" style="margin-top: 12px;">
+      <form method="post" class="employee-filters student-filters">
+        {% if is_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="fee_branch" value="{{ staff_department }}">
+        {% else %}
+          <select name="fee_branch" required>
+            <option value="">Select Branch</option>
+            {% for b in branches %}
+              <option value="{{ b }}">{{ b }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        <select name="semester_no" required>
+          <option value="">Select Semester</option>
+          {% for sem_no in [1,2,3,4,5,6] %}
+            <option value="{{ sem_no }}">Sem {{ sem_no }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="academic_year" value="{{ default_academic_year }}" placeholder="Academic Year" required>
+        <input type="number" step="0.01" min="0" name="admission_fee_due" placeholder="Admission Fee Due">
+        <input type="number" step="0.01" min="0" name="tuition_fee_due" placeholder="Tuition Fee Due">
+        <input type="number" step="0.01" min="0" name="management_fee_due" placeholder="Management Fee Due">
+        <input type="number" step="0.01" min="0" name="exam_fee_due" placeholder="Exam Fee Due">
+        <button type="submit">Save Fee Structure</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="employee-filters-card no-print" style="margin-top: 12px;">
+      <b>View only access:</b> only Admin, HOD, or Management staff can add/edit fee details.
+    </div>
+    {% endif %}
+
+    <div class="employee-table-card">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>SI NO</th>
+              <th>Name</th>
+              <th>Admission ID</th>
+              <th>Reg No</th>
+              <th>Branch</th>
+              <th>Sem</th>
+              <th>Total Due</th>
+              <th>Total Paid</th>
+              <th>Balance</th>
+              <th>Fee State</th>
+              <th class="no-print">History</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ s.student_name }}</td>
+                <td><a class="table-link" href="/admin/fees/student/{{ s.admission_id }}">{{ s.admission_id }}</a></td>
+                <td>{% if s.college_reg_no %}<a class="table-link" href="/admin/fees/student/{{ s.admission_id }}">{{ s.college_reg_no }}</a>{% else %}-{% endif %}</td>
+                <td>{{ s.branch }}</td>
+                <td>{{ s.current_sem }}</td>
+                <td>{{ s.total_due }}</td>
+                <td>{{ s.total_paid }}</td>
+                <td>{{ s.balance }}</td>
+                <td>{{ s.payment_state }}</td>
+                <td class="no-print"><a class="table-link" href="/admin/fees/student/{{ s.admission_id }}">Open</a></td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="11">No fee records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

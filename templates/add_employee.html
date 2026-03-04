@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Employee | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card add-employee-card">
+    <h2>{% if edit_mode %}Edit Employee{% else %}Add Employee{% endif %}</h2>
+    <p class="subtitle">{% if edit_mode %}Update employee details{% else %}Enter employee details{% endif %}</p>
+
+    <form method="post" class="add-employee-form">
+      <input type="text" name="employee_name" class="preserve-case" placeholder="Employee Name" value="{{ employee.employee_name if employee else '' }}" required>
+
+      {% if is_staff %}
+        <input type="text" value="{{ staff_department }}" readonly>
+        <input type="hidden" name="department" value="{{ staff_department }}">
+      {% else %}
+        <select name="department" class="preserve-case" required>
+          <option value="">Select Branch / Department</option>
+          <option value="Automobile Engineering" {% if employee and employee.department == "Automobile Engineering" %}selected{% endif %}>Automobile Engineering</option>
+          <option value="Computer Science and Engineering" {% if employee and employee.department == "Computer Science and Engineering" %}selected{% endif %}>Computer Science and Engineering</option>
+          <option value="Electronics and Communication Engineering" {% if employee and employee.department == "Electronics and Communication Engineering" %}selected{% endif %}>Electronics and Communication Engineering</option>
+          <option value="Mechanical Engineering" {% if employee and employee.department == "Mechanical Engineering" %}selected{% endif %}>Mechanical Engineering</option>
+        </select>
+      {% endif %}
+
+      <select name="designation" class="preserve-case" required>
+        <option value="">Select Designation</option>
+        <option value="Head of Department" {% if employee and employee.designation == "Head of Department" %}selected{% endif %}>Head of Department</option>
+        <option value="Teaching Staff" {% if employee and employee.designation == "Teaching Staff" %}selected{% endif %}>Teaching staff</option>
+        <option value="Non Teaching Staff" {% if employee and employee.designation == "Non Teaching Staff" %}selected{% endif %}>Non teaching staff</option>
+        <option value="Helper" {% if employee and employee.designation == "Helper" %}selected{% endif %}>Helper</option>
+      </select>
+
+      <div>
+        <input
+          type="tel"
+          name="mobile_no"
+          id="employee_mobile"
+          class="preserve-case"
+          placeholder="Mobile Number"
+          value="{{ employee.mobile_no if employee else '' }}"
+          maxlength="10"
+          required
+          oninput="validateEmployeeMobile()"
+        >
+        <small id="employee_mobile_msg" class="error-text">PLEASE ENTER 10 DIGIT MOBILE NUMBER</small>
+      </div>
+
+      <button type="submit" class="save-employee-btn">{% if edit_mode %}Update Employee{% else %}Save Employee{% endif %}</button>
+    </form>
+
+    <a class="link" href="/admin/employees">Back to Employee Details</a>
+  </div>
+
+  <script>
+    function validateEmployeeMobile() {
+      const input = document.getElementById("employee_mobile");
+      const msg = document.getElementById("employee_mobile_msg");
+
+      input.value = input.value.replace(/[^0-9]/g, "");
+
+      if (input.value.length !== 10) {
+        msg.textContent = "PLEASE ENTER 10 DIGIT MOBILE NUMBER";
+        msg.style.color = "#ff8b8b";
+      } else {
+        msg.textContent = "";
+      }
+    }
+  </script>
+</body>
+</html>

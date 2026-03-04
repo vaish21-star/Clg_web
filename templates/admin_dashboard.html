@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Admin Dashboard | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+  <div class="dashboard">
+    <div class="header">
+      <h2>Admin Dashboard</h2>
+      <p class="subtitle">
+        Sri Venkateshwara Polytechnic ERP
+        {% if is_staff %} | Staff Access: {{ staff_department }}{% endif %}
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="box">
+        <h3>Admissions</h3>
+        <p>Approve new student applications</p>
+        <a class="link" href="/admin/applications">Open</a>
+      </div>
+
+      {% if not is_staff %}
+      <div class="box">
+        <h3>Students</h3>
+        <p>Add and manage student records</p>
+        <a class="link" href="/add-student">Open</a>
+      </div>
+      {% endif %}
+
+      <div class="box">
+        <h3>Student Details</h3>
+        <p>View all student data in table format</p>
+        <a class="link" href="/admin/student-details">Open</a>
+      </div>
+
+      {% if not is_staff %}
+      <div class="box">
+        <h3>Education</h3>
+        <p>Enter SSLC, ITI, PUC details</p>
+        <a class="link" href="/add-education">Open</a>
+      </div>
+      {% endif %}
+
+      {% if not is_staff or can_manage_fees %}
+      <div class="box">
+        <h3>Fees</h3>
+        <p>{% if is_staff %}Manage fee details{% else %}Set and update fee status{% endif %}</p>
+        <a class="link" href="/admin/fees">Open</a>
+      </div>
+      {% endif %}
+
+      {% if not is_staff or is_hod_staff or is_management_staff %}
+      <div class="box employee-box">
+        <h3>Employee Details</h3>
+        <p>View and manage staff in table format</p>
+        <a class="link employee-open-link" href="/admin/employees">Open</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <a class="link logout" href="/logout">Logout</a>
+  </div>
+
+</body>
+
+</html>

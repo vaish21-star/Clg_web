@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Education | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="card">
+  <h2>Education Details</h2>
+  <p class="subtitle">Student Academic Record</p>
+
+  <form method="post">
+    <input type="text" name="admission_id" placeholder="Admission ID" required>
+
+    <select name="qualifying_exam">
+      <option>SSLC</option>
+      <option>PUC</option>
+      <option>ITI</option>
+      <option>OTHER</option>
+    </select>
+
+    <input type="text" name="register_number" placeholder="Register Number" required>
+    <input type="number" name="year_of_passing" placeholder="Year of Passing" required>
+
+    <input type="number" name="total_max_marks" placeholder="Total Max Marks" required>
+    <input type="number" name="total_marks_obtained" placeholder="Marks Obtained" required>
+
+    <input type="number" name="science_max_marks" placeholder="Science Max Marks">
+    <input type="number" name="science_marks_obtained" placeholder="Science Marks">
+
+    <input type="number" name="maths_max_marks" placeholder="Maths Max Marks">
+    <input type="number" name="maths_marks_obtained" placeholder="Maths Marks">
+
+    <button type="submit">Save Education</button>
+  </form>
+
+  <a class="link" href="/admin">⬅ Back to Dashboard</a>
+</div>
+
+</body>
+</html>

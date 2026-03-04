@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Application Rejected</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<div class="card">
+
+  <h2 style="color:#ff6b6b;">Application Rejected</h2>
+  <p class="subtitle">Sri Venkateshwara Polytechnic</p>
+
+  <div class="box">
+    <h3>Reason</h3>
+    <p>{{ reason }}</p>
+  </div>
+
+  <div class="form-actions space-between" style="margin-top:20px;">
+    <a href="/login" class="btn secondary">
+      Logout
+    </a>
+
+    <a href="/student/reupload" class="btn primary">
+      Re-upload Documents
+    </a>
+  </div>
+
+</div>
+
+</body>
+</html>

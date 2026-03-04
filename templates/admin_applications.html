@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Student Applications</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+
+<body>
+  <div class="card dashboard applications-page">
+    <h2>Student Applications</h2>
+    <p class="subtitle">Approve new student applications</p>
+
+    <form method="get" action="/admin/applications" class="applications-filters no-print">
+      <input name="q" placeholder="Search Name / Admission ID / Reg No" value="{{ q }}" class="preserve-case">
+
+      <select name="status">
+        <option value="INACTIVE" {% if status=="INACTIVE" %}selected{% endif %}>Pending</option>
+        <option value="ACTIVE" {% if status=="ACTIVE" %}selected{% endif %}>Approved</option>
+        <option value="REJECTED" {% if status=="REJECTED" %}selected{% endif %}>Rejected</option>
+        <option value="ALL" {% if status=="ALL" %}selected{% endif %}>All Students</option>
+      </select>
+
+      {% if is_staff %}
+        <input value="{{ staff_department }}" readonly>
+        <input type="hidden" name="branch" value="{{ staff_department }}">
+      {% else %}
+        <select name="branch">
+          <option value="">All Branches</option>
+          {% for b in branches %}
+            <option value="{{ b }}" {% if branch==b %}selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+
+      <button type="submit" class="table-btn">Search</button>
+    </form>
+
+    <div class="applications-table-wrap">
+      <table class="applications-table">
+        <thead>
+          <tr>
+            <th>SI NO</th>
+            <th>Name</th>
+            <th>Admission ID</th>
+            <th>Branch</th>
+            <th>Gender</th>
+            <th>DOB</th>
+            <th>Mobile no</th>
+            <th>Caste</th>
+            <th>Alloted Category</th>
+            <th>Status</th>
+            <th class="no-print">Approve</th>
+            <th class="no-print">Reject</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ student.student_name }}</td>
+            <td>{{ student.admission_id }}</td>
+            <td>{{ student.branch }}</td>
+            <td>{{ student.gender }}</td>
+            <td>{{ student.dob }}</td>
+            <td>{{ student.mobile }}</td>
+            <td>{{ student.caste_category }}</td>
+            <td>{{ student.alloted_category }}</td>
+            <td>
+              {% if student.status == "ACTIVE" %}
+                Approved
+              {% elif student.status == "REJECTED" %}
+                Rejected
+              {% else %}
+                Still Pending
+              {% endif %}
+            </td>
+              <td class="no-print">
+              {% if student.status != "ACTIVE" %}
+                <a href="{{ url_for('approve_student', admission_id=student.admission_id, status=status, q=q, branch=branch) }}" class="table-link approve-link">Approve</a>
+              {% else %}
+                <span class="status-text">Approved</span>
+              {% endif %}
+            </td>
+            <td class="no-print">
+              {% if student.status != "REJECTED" %}
+                <button type="button" class="table-btn reject-btn-sm no-print" onclick="toggleRejectForm('{{ student.admission_id }}')">Reject</button>
+                <form action="/reject/{{ student.admission_id }}" method="post" id="rejectForm-{{ student.admission_id }}" class="reject-form hidden-reject-form no-print">
+                  <input type="hidden" name="status" value="{{ status }}">
+                  <input type="hidden" name="q" value="{{ q }}">
+                  <input type="hidden" name="branch" value="{{ branch }}">
+                  <input name="reason" class="preserve-case" placeholder="Reason for rejection" required>
+                  <button type="submit" class="table-btn reject-btn">Submit</button>
+                </form>
+              {% else %}
+                <span class="status-text">Rejected</span>
+                <button type="button" class="table-link reason-toggle no-print" onclick="toggleRejectReason('{{ student.admission_id }}')">Reason</button>
+                <div id="rejectReason-{{ student.admission_id }}" class="reject-reason hidden-reject-form">{{ student.rejection_reason }}</div>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="12">No applications found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-actions no-print" style="justify-content:center; margin-top:14px;">
+      <button type="button" class="table-btn" onclick="window.print()">Print / Save PDF</button>
+    </div>
+
+    <a href="/admin" class="link no-print">Back to Dashboard</a>
+  </div>
+
+  <script>
+    function toggleRejectForm(admissionId) {
+      const form = document.getElementById(`rejectForm-${admissionId}`);
+      if (!form) return;
+      form.classList.toggle("hidden-reject-form");
+      if (!form.classList.contains("hidden-reject-form")) {
+        const input = form.querySelector("input[name='reason']");
+        if (input) input.focus();
+      }
+    }
+
+    function toggleRejectReason(admissionId) {
+      const reasonBox = document.getElementById(`rejectReason-${admissionId}`);
+      if (!reasonBox) return;
+      reasonBox.classList.toggle("hidden-reject-form");
+    }
+  </script>
+</body>
+
+</html>

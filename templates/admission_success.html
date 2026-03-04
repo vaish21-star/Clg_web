@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Application Submitted</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<div class="card">
+  <h2>Application Submitted 🎉</h2>
+  <p class="subtitle">Please wait for admin approval</p>
+
+  <p><b>Your Admission ID:</b></p>
+  <h2 style="color:#ffcf4d">{{ admission_id }}</h2>
+
+  <a class="link"  href="/login">Login</a>
+
+</div>
+
+</body>
+</html>

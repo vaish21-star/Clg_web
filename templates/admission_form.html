@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Online Admission | Sri Venkateshwara Polytechnic</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="card">
+
+  <h2>Online Admission Form</h2>
+  <p class="subtitle">Sri Venkateshwara Polytechnic</p>
+
+  <!-- ================= PROGRESS INDICATOR ================= -->
+  <div class="progress-wrapper">
+    <div class="progress-steps">
+      <div class="step active">
+        <span>1</span>
+        <p>Student</p>
+      </div>
+      <div class="step">
+        <span>2</span>
+        <p>Parent</p>
+      </div>
+      <div class="step">
+        <span>3</span>
+        <p>Documents</p>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill step-1"></div>
+    </div>
+  </div>
+
+  <!-- ================= FORM START ================= -->
+  <form method="post" enctype="multipart/form-data">
+
+    <!-- ================= STUDENT DETAILS ================= -->
+    <div class="form-section">
+      <h3 class="section-title">Student Details</h3>
+
+      <div class="form-grid">
+        <input name="student_name" placeholder="Student Full Name" required>
+        <input name="student_mobile" placeholder="Student Mobile" required>
+
+        <input name="student_email" placeholder="Email ID" required>
+        <select name="branch">
+          <option>Computer Engineering</option>
+          <option>Electronics & Communication</option>
+          <option>Mechanical Engineering</option>
+          <option>Automobile Engineering</option>
+        </select>
+
+        <div class="password-wrapper">
+          <input type="password" id="admission_password" name="password" class="preserve-case" placeholder="Create Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="new-password">
+          <button type="button" class="toggle-password" onclick="togglePassword('admission_password', this)" aria-label="Show password" title="Show password">
+            <span aria-hidden="true">&#128065;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PARENT DETAILS ================= -->
+    <div class="form-section">
+      <h3 class="section-title">Parent Details</h3>
+
+      <div class="form-grid">
+        <input name="father_name" placeholder="Father Name" required>
+        <input name="father_mobile" placeholder="Father Mobile" required>
+
+        <input name="mother_name" placeholder="Mother Name" required>
+        <input name="mother_mobile" placeholder="Mother Mobile" required>
+
+        <select name="indian_nationality">
+          <option value="YES">Indian</option>
+          <option value="NO">Other</option>
+        </select>
+
+        <input name="religion" placeholder="Religion">
+
+        <select name="disability">
+          <option value="NO">No Disability</option>
+          <option value="YES">Yes</option>
+        </select>
+
+        <input name="aadhaar_number" placeholder="Aadhaar Number">
+        <input name="caste_rd_number" placeholder="Caste Certificate No">
+        <input name="income_rd_number" placeholder="Income Certificate No">
+        <input name="annual_income" placeholder="Annual Income">
+      </div>
+    </div>
+
+    <!-- ================= ADDRESS ================= -->
+    <div class="form-section">
+      <h3 class="section-title">Address Details</h3>
+
+      <div class="form-grid single">
+        <textarea name="residential_address" placeholder="Residential Address"></textarea>
+        <textarea name="permanent_address" placeholder="Permanent Address"></textarea>
+      </div>
+    </div>
+
+    <!-- ================= DOCUMENTS ================= -->
+    <div class="form-section">
+      <h3 class="section-title">Documents Upload</h3>
+
+      <div class="form-grid">
+        <input type="file" name="photo" required>
+        <input type="file" name="marks_card" required>
+
+        <input type="file" name="caste_certificate" required>
+        <input type="file" name="income_certificate" required>
+      </div>
+    </div>
+
+    <button type="submit">Submit Application</button>
+  </form>
+
+  <a href="/home" class="link">⬅ Back to Home</a>
+</div>
+
+<script>
+  function togglePassword(fieldId, toggleButton) {
+    const passwordField = document.getElementById(fieldId);
+    if (!passwordField) return;
+
+    if (passwordField.type === "password") {
+      passwordField.type = "text";
+      toggleButton.setAttribute("aria-label", "Hide password");
+      toggleButton.setAttribute("title", "Hide password");
+    } else {
+      passwordField.type = "password";
+      toggleButton.setAttribute("aria-label", "Show password");
+      toggleButton.setAttribute("title", "Show password");
+    }
+  }
+</script>
+
+</body>
+</html>

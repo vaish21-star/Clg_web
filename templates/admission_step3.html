@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Admission – Step 3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+
+<script>
+  document.addEventListener("input", function (e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+      e.target.value = e.target.value.toUpperCase();
+    }
+  });
+</script>
+
+<body>
+
+  <div class="card admission-card">
+
+    <h2>Online Admission</h2>
+    <p class="subtitle">Step 3 of 3 – Documents & Verification</p>
+
+    <div class="progress-bar">
+      <div class="progress-fill step-3"></div>
+    </div>
+
+    <!-- ✅ IMPORTANT -->
+    <form method="POST" enctype="multipart/form-data">
+
+      <!-- ================= AADHAAR ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Aadhaar Details</h3>
+
+        <div class="form-grid two-col">
+          <input type="text" name="aadhaar_number" id="aadhaar_number" placeholder="Aadhaar Number" maxlength="12"
+            required oninput="validateAadhaar()">
+<div class="file-col">
+    <input type="file" name="aadhaar_file"  accept=".pdf,.jpg,.png">
+    <small class="upload-instruction">
+      Upload Aadhaar Card (PDF / JPG / PNG)
+    </small>
+  </div>
+
+        </div>
+        
+
+        <small id="aadhaar_msg"></small>
+      </div>
+
+      <!-- ================= CASTE ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Caste Certificate</h3>
+
+        <div class="form-grid two-col">
+          <input type="text" name="caste_rd_number" id="caste_rd_number" placeholder="Caste Certificate RD Number"
+            required oninput="validateCasteRD()">
+            <div class="file-col">
+    <input type="file" name="caste_certificate_file"  accept=".pdf,.jpg,.png">
+    <small class="upload-instruction">
+      Upload Caste Certificate (PDF / JPG / PNG)
+    </small>
+  </div>
+        </div>
+
+        <small id="caste_msg"></small>
+      </div>
+
+      <!-- ================= INCOME ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Income Certificate</h3>
+
+        <div class="form-grid two-col">
+          <input type="text" name="income_rd_number" id="income_rd_number" placeholder="Income Certificate RD Number"
+            required oninput="validateIncomeRD()">
+            <div class="file-col">
+    <input type="file" name="income_certificate_file"  accept=".pdf,.jpg,.png">
+    <small class="upload-instruction">
+      Upload Income Certificate (PDF / JPG / PNG)
+    </small>
+  </div>
+        </div>
+
+        <small id="income_msg"></small>
+      </div>
+
+      <!-- ================= MARKS CARD ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Qualifying Exam Marks Card</h3>
+
+        <div class="form-grid two-col">
+          <select name="marks_exam_type" required>
+            <option value="">Select Exam</option>
+            <option>SSLC</option>
+            <option>CBSE</option>
+            <option>ICSE</option>
+            <option>PUC</option>
+            <option>ITI</option>
+          </select>
+
+          <div class="file-col">
+    <input type="file" name="marks_card_file"  accept=".pdf,.jpg,.png">
+    <small class="upload-instruction">
+      Upload Marks Card (PDF / JPG / PNG)
+    </small>
+  </div>
+        </div>
+      </div>
+
+      <!-- ================= PHOTO ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Student Photo</h3>
+
+        <div class="form-grid two-col">
+          <input type="text" value="Passport Size Photo" disabled>
+          <div class="file-col">
+    <input type="file" name="student_photo"  accept=".pdf,.jpg,.png">
+    <small class="upload-instruction">
+      Upload Student Photo (PDF / JPG / PNG)
+    </small>
+  </div>
+        </div>
+      </div>
+
+      <!-- ================= ACTIONS ================= -->
+      <div class="form-actions space-between">
+        <a href="/admission/step-2" class="btn secondary">← Back</a>
+        <button type="submit" class="btn primary">Submit Application</button>
+      </div>
+
+    </form>
+
+  </div>
+
+  <script>
+    function validateAadhaar() {
+      const v = aadhaar_number.value.replace(/[^0-9]/g, '');
+      aadhaar_number.value = v;
+      aadhaar_msg.textContent =
+        v.length === 12 ? "✅ Valid Aadhaar number" : "❌ Aadhaar must be 12 digits";
+      aadhaar_msg.style.color = v.length === 12 ? "green" : "red";
+    }
+
+    function validateCasteRD() {
+      const ok = /^[A-Za-z0-9]{6,20}$/.test(caste_rd_number.value);
+      caste_msg.textContent = ok ? "✅ Valid RD number" : "❌ Invalid RD number";
+      caste_msg.style.color = ok ? "green" : "red";
+    }
+
+    function validateIncomeRD() {
+      const ok = /^[A-Za-z0-9]{6,20}$/.test(income_rd_number.value);
+      income_msg.textContent = ok ? "✅ Valid RD number" : "❌ Invalid RD number";
+      income_msg.style.color = ok ? "green" : "red";
+    }
+  </script>
+
+</body>
+
+</html>

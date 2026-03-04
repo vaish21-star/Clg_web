@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verify Staff OTP | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>Verify Staff OTP</h2>
+    <p class="subtitle">{{ email }}</p>
+    {% if error %}<p style="color:#c62828">{{ error }}</p>{% endif %}
+    {% if message %}<p style="color:#1b5e20">{{ message }}</p>{% endif %}
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="email" value="{{ email }}">
+      <input type="text" name="otp" placeholder="Enter 6-digit OTP" required>
+      <button type="submit">Verify & Create Account</button>
+    </form>
+    <a class="link" href="/staff/register">Back</a>
+  </div>
+</body>
+</html>

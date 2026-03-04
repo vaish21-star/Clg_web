@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Admission – Step 2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+
+<script>
+  document.addEventListener("input", function (e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+      e.target.value = e.target.value.toUpperCase();
+    }
+  });
+</script>
+
+<body>
+
+  <div class="card admission-card">
+
+    <h2>Online Admission</h2>
+    <p class="subtitle">Step 2 of 3 – Parent & Address Details</p>
+
+    <div class="progress-bar">
+      <div class="progress-fill step-2"></div>
+    </div>
+
+    <form method="post">
+
+      <!-- ================= PARENT DETAILS ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Parent Details</h3>
+
+        <div class="form-grid two-col">
+
+          <!-- Father Name -->
+          <input name="father_name" placeholder="Father Name" required>
+
+          <!-- Father Mobile (MANDATORY) -->
+          <div>
+            <input type="tel" name="father_mobile" id="father_mobile" placeholder="Father Mobile Number" maxlength="10"
+              required oninput="validateMobile('father_mobile','father_msg', true)">
+            <small id="father_msg"></small>
+          </div>
+
+          <!-- Mother Name -->
+          <input name="mother_name" placeholder="Mother Name" required>
+
+          <!-- Mother Mobile (OPTIONAL) -->
+          <div>
+            <input type="tel" name="mother_mobile" id="mother_mobile" placeholder="Mother Mobile Number (Optional)"
+              maxlength="10" oninput="validateMobile('mother_mobile','mother_msg', false)">
+            <small id="mother_msg"></small>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================= ADDRESS DETAILS ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Address Details</h3>
+
+        <div class="form-grid two-col">
+
+          <textarea id="residential_address" name="residential_address" placeholder="Residential Address" rows="3"
+            required></textarea>
+
+          <textarea id="permanent_address" name="permanent_address" placeholder="Permanent Address" rows="3"
+            required></textarea>
+
+        </div>
+
+        <!-- SAME ADDRESS CHECKBOX -->
+        <div class="same-address">
+          <label class="checkbox-wrap">
+            <input type="checkbox" id="same_address" onchange="copyAddress()">
+            <span class="checkmark"></span>
+            Residential address is same as permanent address
+          </label>
+        </div>
+      </div>
+
+      <!-- ================= SUBMIT ================= -->
+      <div class="form-actions">
+        <button type="submit" class="btn primary full-width">
+          Next →
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    function copyAddress() {
+      const res = document.getElementById("residential_address");
+      const perm = document.getElementById("permanent_address");
+      const check = document.getElementById("same_address");
+
+      if (check.checked) {
+        perm.value = res.value;
+        perm.setAttribute("readonly", true);
+      } else {
+        perm.value = "";
+        perm.removeAttribute("readonly");
+      }
+    }
+
+    function validateMobile(inputId, msgId, required) {
+      const input = document.getElementById(inputId);
+      const msg = document.getElementById(msgId);
+
+      // allow only numbers
+      input.value = input.value.replace(/[^0-9]/g, "");
+
+      if (input.value.length === 0) {
+        if (required) {
+          msg.textContent = "❌ Mobile number required";
+          msg.style.color = "red";
+        } else {
+          msg.textContent = "";
+        }
+        return;
+      }
+
+      if (input.value.length < 10) {
+        msg.textContent = "❌ Invalid mobile number";
+        msg.style.color = "red";
+      } else {
+        msg.textContent = "✅ Valid mobile number";
+        msg.style.color = "green";
+      }
+    }
+  </script>
+
+</body>
+
+</html>

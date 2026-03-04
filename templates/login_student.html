@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Login | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>Student Login</h2>
+    <p class="subtitle">Login with Admission ID and password</p>
+    {% if error %}<p style="color:#c62828">{{ error }}</p>{% endif %}
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="username" class="preserve-case" placeholder="Admission ID" required>
+      <div class="password-wrapper">
+        <input type="password" id="student_login_password" name="password" class="preserve-case" placeholder="Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="current-password">
+        <button type="button" class="toggle-password" onclick="togglePassword('student_login_password', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+      <button type="submit">Login</button>
+    </form>
+    <a class="link" href="/forgot-password/student">Forgot Password?</a>
+    <a class="link" href="/login">Back</a>
+  </div>
+<script>
+  function togglePassword(fieldId, toggleButton) {
+    const passwordField = document.getElementById(fieldId);
+    if (!passwordField) return;
+
+    if (passwordField.type === "password") {
+      passwordField.type = "text";
+      toggleButton.setAttribute("aria-label", "Hide password");
+      toggleButton.setAttribute("title", "Hide password");
+    } else {
+      passwordField.type = "password";
+      toggleButton.setAttribute("aria-label", "Show password");
+      toggleButton.setAttribute("title", "Show password");
+    }
+  }
+</script>
+</body>
+</html>

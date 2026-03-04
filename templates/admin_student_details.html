@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Details | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="dashboard employee-page student-list-page">
+    <div class="header">
+      <h2>SRI VENKATESHWARA POLYTECHNIC</h2>
+      <p class="subtitle">{{ academic_year }} Approved Student List</p>
+    </div>
+
+    <div class="table-actions">
+      <a class="link action-link back-dashboard-link no-print" href="/admin">Back to Dashboard</a>
+    </div>
+
+    <div class="employee-filters-card">
+      <form method="get" class="employee-filters student-filters no-print">
+        <input
+          type="text"
+          name="q"
+          class="preserve-case"
+          placeholder="Search by name / admission ID / regn no"
+          value="{{ filters.q }}"
+        >
+
+        <select name="status">
+          <option value="">All Status</option>
+          <option value="ACTIVE" {% if filters.status == "ACTIVE" %}selected{% endif %}>Active</option>
+          <option value="INACTIVE" {% if filters.status == "INACTIVE" %}selected{% endif %}>Inactive</option>
+          <option value="REJECTED" {% if filters.status == "REJECTED" %}selected{% endif %}>Rejected</option>
+        </select>
+
+        {% if is_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="branch" value="{{ staff_department }}">
+        {% else %}
+          <select name="branch">
+            <option value="">All Branches</option>
+            {% for b in branches %}
+              <option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+
+        <button type="submit">Apply</button>
+      </form>
+    </div>
+
+    <div class="employee-table-card">
+      <div class="table-wrap">
+        <table class="employee-table">
+          <thead>
+            <tr>
+              <th>SI NO</th>
+              <th>Name</th>
+              <th>Admission ID</th>
+              <th>Reg no</th>
+              <th>Branch</th>
+              <th>Gender</th>
+              <th>DOB</th>
+              <th>Mobile no</th>
+              <th>Caste</th>
+              <th>Alloted Category</th>
+              <th>PHOTO</th>
+              <th class="no-print">Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td><a class="table-link" href="/admin/student/{{ s.admission_id }}">{{ s.student_name }}</a></td>
+                <td><a class="table-link" href="/admin/student/{{ s.admission_id }}">{{ s.admission_id }}</a></td>
+                <td>{% if s.college_reg_no %}<a class="table-link" href="/admin/student/{{ s.admission_id }}">{{ s.college_reg_no }}</a>{% else %}-{% endif %}</td>
+                <td>{{ s.branch }}</td>
+                <td>{{ s.gender }}</td>
+                <td>{{ s.dob }}</td>
+                <td>{{ s.mobile }}</td>
+                <td>{{ s.caste_category }}</td>
+                <td>{{ s.alloted_category }}</td>
+                <td>
+                  <div class="photo-slot">
+                    {% if s.photo_file %}
+                      <img src="{{ url_for('static', filename='uploads/' + s.photo_file) }}" alt="Student photo" class="student-photo-thumb">
+                    {% endif %}
+                    <div class="photo-paste-box"></div>
+                  </div>
+                </td>
+                <td class="no-print">
+                  <a class="edit-employee-link" href="/admin/student-details/edit/{{ s.admission_id }}" title="Edit Student" aria-label="Edit Student">&#9998;</a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="12">No student records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-actions no-print">
+      <button type="button" class="table-btn" onclick="window.print()">Print / Save PDF</button>
+    </div>
+  </div>
+</body>
+</html>
+
+
