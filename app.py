@@ -165,6 +165,22 @@ BRANCH_OPTIONS = [
 
 SUBJECT_TYPE_OPTIONS = ["THEORY", "PRACTICAL", "AUDIT COURSE"]
 DEFAULT_SUBJECT_SERIES_OPTIONS = ["C15 SERIES", "C20 SERIES", "C25 SERIES"]
+DEFAULT_SUBJECT_MASTER_SEED = [
+    # Automobile Engineering - C20 series - Semester 1
+    ("Automobile Engineering", 1, "C20 SERIES", "Engineering Mathematics", "20SC01T", "THEORY"),
+    ("Automobile Engineering", 1, "C20 SERIES", "Mechanical Science & Engineering", "20AT11T", "THEORY"),
+    ("Automobile Engineering", 1, "C20 SERIES", "Communication Skills", "20EG01P", "PRACTICAL"),
+    ("Automobile Engineering", 1, "C20 SERIES", "Computer Aided Engineering Drawing", "20ME01P", "PRACTICAL"),
+    ("Automobile Engineering", 1, "C20 SERIES", "Environment Sustainability", "20AU01T", "AUDIT COURSE"),
+    ("Automobile Engineering", 1, "C20 SERIES", "Physical Activity (NCC/NSS/Yoga etc.)", "-", "AUDIT COURSE"),
+    # Automobile Engineering - C20 series - Semester 2
+    ("Automobile Engineering", 2, "C20 SERIES", "Project Management Skills", "20PM01T", "THEORY"),
+    ("Automobile Engineering", 2, "C20 SERIES", "Statistics and Analytics", "20SC02P", "PRACTICAL"),
+    ("Automobile Engineering", 2, "C20 SERIES", "Fundamentals of Electrical & Electronics Engineering", "20EE01P", "PRACTICAL"),
+    ("Automobile Engineering", 2, "C20 SERIES", "IT Skills", "20CS01P", "PRACTICAL"),
+    ("Automobile Engineering", 2, "C20 SERIES", "Automotive Engines", "20AT21P", "PRACTICAL"),
+    ("Automobile Engineering", 2, "C20 SERIES", "Kannada-I / Kannada Communication", "20KA21T", "AUDIT COURSE"),
+]
 
 
 def ensure_employees_table():
@@ -759,6 +775,12 @@ def ensure_subject_master_table():
         cur.execute("SHOW INDEX FROM subjects WHERE Key_name='idx_subjects_branch_sem'")
         if not cur.fetchone():
             cur.execute("CREATE INDEX idx_subjects_branch_sem ON subjects(branch, semester)")
+        for row in DEFAULT_SUBJECT_MASTER_SEED:
+            cur.execute("""
+                INSERT IGNORE INTO subjects
+                (branch, semester, series, subject_name, course_code, subject_type)
+                VALUES (%s,%s,%s,%s,%s,%s)
+            """, row)
         db.commit()
     except Exception:
         db.rollback()

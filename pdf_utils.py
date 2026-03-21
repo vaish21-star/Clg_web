@@ -64,28 +64,91 @@ def _styles():
             fontSize=11,
             alignment=1,
         ),
+        "header_title": ParagraphStyle(
+            "header_title",
+            parent=base["Normal"],
+            fontName="Times-Bold",
+            fontSize=17,
+            alignment=1,
+            leading=20,
+            textColor=colors.HexColor("#1f4e8c"),
+        ),
+        "header_sub": ParagraphStyle(
+            "header_sub",
+            parent=base["Normal"],
+            fontName="Times-Roman",
+            fontSize=10,
+            alignment=1,
+            leading=13,
+            textColor=colors.HexColor("#1f4e8c"),
+        ),
+        "label_cell": ParagraphStyle(
+            "label_cell",
+            parent=base["Normal"],
+            fontName="Times-Bold",
+            fontSize=9,
+            leading=11.5,
+            textColor=colors.HexColor("#1d1d1d"),
+        ),
+        "value_cell": ParagraphStyle(
+            "value_cell",
+            parent=base["Normal"],
+            fontName="Times-Roman",
+            fontSize=9,
+            leading=11.5,
+            textColor=colors.HexColor("#1d1d1d"),
+        ),
     }
 
 
-def _line():
-    t = Table([[""]], colWidths=[17.0 * cm], rowHeights=[0.1 * cm])
-    t.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1.2, colors.black)]))
+def _line(width_cm=17.0):
+    t = Table([[""]], colWidths=[width_cm * cm], rowHeights=[0.1 * cm])
+    t.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1.0, colors.HexColor("#1f4e8c"))]))
     return t
 
 
-def _header(elements, s):
-    elements.append(Paragraph("Sri Venkateshwara Polytechnic", s["title"]))
-    elements.append(Spacer(1, 4))
-    elements.append(Paragraph(
-        "(A Unit of Nehru Smaraka Vidya Kendra Trust, Bangalore)<br/>"
-        "Recognised by AICTE New Delhi and Govt. of Karnataka<br/>"
+def _header(elements, s, content_width_cm=17.0):
+    logo_path = os.path.join("static", "images", "logo.jpeg")
+    logo_cell = ""
+    if os.path.exists(logo_path):
+        logo_cell = Image(logo_path, width=2.2 * cm, height=2.2 * cm)
+
+    middle_width_cm = max(content_width_cm - 4.8, 8.0)
+    heading = Paragraph(
+        "SRI VENKATESHWARA POLYTECHNIC",
+        s["header_title"],
+    )
+    sub_heading = Paragraph(
         "Jangalpalya, Bannerghatta, Bengaluru - 560 083",
-        s["sub"],
-    ))
+        s["header_sub"],
+    )
+    center_block = Table([[heading], [sub_heading]], colWidths=[middle_width_cm * cm])
+    center_block.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+
+    head = Table(
+        [[logo_cell, center_block, ""]],
+        colWidths=[2.4 * cm, middle_width_cm * cm, 2.4 * cm],
+    )
+    head.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (0, 0), "LEFT"),
+        ("VALIGN", (0, 0), (0, 0), "MIDDLE"),
+        ("ALIGN", (1, 0), (1, 0), "CENTER"),
+        ("VALIGN", (1, 0), (1, 0), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    elements.append(head)
     elements.append(Spacer(1, 6))
-    elements.append(Paragraph("Department of Computer Science &amp; Engg.", s["dept"]))
-    elements.append(Spacer(1, 4))
-    elements.append(_line())
+    elements.append(_line(width_cm=content_width_cm))
     elements.append(Spacer(1, 10))
 
 
@@ -117,30 +180,90 @@ def _marks_text(obtained, maximum):
 def _section_title(text):
     t = Table([[text]], colWidths=[17.0 * cm])
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f5f5")),
-        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#6a6a6a")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#edf2f7")),
+        ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#5f6f7f")),
         ("FONTNAME", (0, 0), (-1, -1), "Times-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 11),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    return t
+
+
+def _detail_grid(rows, s=None, col_widths=None):
+    styles = s or _styles()
+    label_style = styles["label_cell"]
+    value_style = styles["value_cell"]
+    rendered_rows = []
+    for row in rows:
+        rendered_row = []
+        for idx, cell in enumerate(row):
+            if hasattr(cell, "wrap"):
+                rendered_row.append(cell)
+                continue
+            style = label_style if idx % 2 == 0 else value_style
+            rendered_row.append(Paragraph(str(cell), style))
+        rendered_rows.append(rendered_row)
+    widths = col_widths or [3.4 * cm, 5.1 * cm, 3.4 * cm, 5.1 * cm]
+    t = Table(rendered_rows, colWidths=widths)
+    t.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.55, colors.HexColor("#6b6b6b")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f7f8fa")),
+        ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#f7f8fa")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
     return t
 
 
-def _detail_grid(rows):
-    t = Table(rows, colWidths=[3.1 * cm, 5.4 * cm, 3.1 * cm, 5.4 * cm])
+def _address_table(rows, s=None):
+    styles = s or _styles()
+    label_style = styles["label_cell"]
+    value_style = styles["value_cell"]
+    rendered_rows = []
+    for label, value in rows:
+        rendered_rows.append([
+            Paragraph(str(label), label_style),
+            Paragraph(str(value), value_style),
+        ])
+    t = Table(rendered_rows, colWidths=[3.8 * cm, 13.2 * cm])
     t.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.8, colors.HexColor("#7a7a7a")),
-        ("FONTNAME", (0, 0), (-1, -1), "Times-Roman"),
-        ("FONTNAME", (0, 0), (0, -1), "Times-Bold"),
-        ("FONTNAME", (2, 0), (2, -1), "Times-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.55, colors.HexColor("#6b6b6b")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f7f8fa")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    return t
+
+
+def _photo_box(photo_path, s=None):
+    styles = s or _styles()
+    box_w = 3.2 * cm
+    box_h = 4.0 * cm
+    img_w = 2.6 * cm
+    img_h = 3.4 * cm
+
+    if photo_path:
+        content = Image(photo_path, width=img_w, height=img_h)
+    else:
+        content = Paragraph("PHOTO", styles["value_cell"])
+
+    t = Table([[content]], colWidths=[box_w], rowHeights=[box_h])
+    t.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#7a7a7a")),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
     ]))
     return t
 
@@ -156,6 +279,8 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
         bottomMargin=0.9 * cm,
     )
     elements = []
+    s = _styles()
+    _header(elements, s, content_width_cm=19.0)
 
     personal = personal or {}
     education = education or {}
@@ -165,7 +290,7 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
     top_meta = Table([[
         f"Application No.: {_safe_text(student.get('admission_id'))}",
         f"Generated On: {generated_on}",
-    ]], colWidths=[8.5 * cm, 8.5 * cm])
+    ]], colWidths=[9.5 * cm, 9.5 * cm])
     top_meta.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "Times-Roman"),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
@@ -191,7 +316,11 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
         ["Mobile", _safe_text(personal.get("student_mobile") or student.get("mobile")), "Email", _safe_text(personal.get("student_email"))],
         ["Date of Birth", _safe_text(personal.get("dob")), "Gender", _safe_text(personal.get("gender"))],
     ]
-    student_table = _detail_grid(student_rows)
+    student_table = _detail_grid(
+        student_rows,
+        s,
+        col_widths=[2.9 * cm, 4.9 * cm, 2.9 * cm, 4.9 * cm],
+    )
 
     photo_path = None
     if docs.get("student_photo"):
@@ -199,19 +328,12 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
         if os.path.exists(candidate):
             photo_path = candidate
 
-    photo_cell = "Photo Not Available"
-    if photo_path:
-        img = Image(photo_path, width=2.4 * cm, height=3.0 * cm)
-        photo_cell = Table([[img]], colWidths=[2.6 * cm], rowHeights=[3.2 * cm])
-        photo_cell.setStyle(TableStyle([
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#7a7a7a")),
-        ]))
+    photo_cell = _photo_box(photo_path, s)
 
-    head_block = Table([[student_table, photo_cell]], colWidths=[14.1 * cm, 2.9 * cm])
+    head_block = Table([[student_table, photo_cell]], colWidths=[15.4 * cm, 3.6 * cm])
     head_block.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (1, 0), (1, 0), 6),
     ]))
     elements.append(head_block)
     elements.append(Spacer(1, 8))
@@ -221,7 +343,7 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
         ["Nationality", _safe_text(personal.get("indian_nationality")), "Religion", _safe_text(personal.get("religion"))],
         ["Caste Category", _safe_text(personal.get("caste_category")), "Alloted Category", _safe_text(personal.get("alloted_category"))],
         ["Admission Quota", _safe_text(personal.get("admission_quota")), "Register Number", _safe_text(personal.get("register_number") or education.get("register_number"))],
-    ]))
+    ], s))
     elements.append(Spacer(1, 8))
 
     elements.append(_section_title("Academic Details"))
@@ -230,14 +352,14 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
         ["Year Of Passing", _safe_text(personal.get("year_of_passing") or education.get("year_of_passing")), "Total Max Marks", _safe_text(education.get("total_max_marks"))],
         ["Total Marks Obtained", _safe_text(education.get("total_marks_obtained")), "Percentage", _safe_text(education.get("percentage"))],
         ["Science Marks", _marks_text(education.get("science_marks_obtained"), education.get("science_max_marks")), "Maths Marks", _marks_text(education.get("maths_marks_obtained"), education.get("maths_max_marks"))],
-    ]))
+    ], s))
     elements.append(Spacer(1, 8))
 
     elements.append(_section_title("Parent Details"))
     elements.append(_detail_grid([
         ["Father Name", _safe_text(personal.get("father_name")), "Father Mobile", _safe_text(personal.get("father_mobile"))],
         ["Mother Name", _safe_text(personal.get("mother_name")), "Mother Mobile", _safe_text(personal.get("mother_mobile"))],
-    ]))
+    ], s))
     elements.append(Spacer(1, 8))
 
     if fee_summary:
@@ -246,24 +368,14 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
             ["Academic Year", _safe_text(fee_summary.get("academic_year")), "Current Sem", _safe_text(fee_summary.get("current_sem"))],
             ["Total Due", _safe_text(fee_summary.get("total_due")), "Total Paid", _safe_text(fee_summary.get("total_paid"))],
             ["Balance", _safe_text(fee_summary.get("balance")), "Fee State", _safe_text(fee_summary.get("payment_state"))],
-        ]))
+        ], s))
         elements.append(Spacer(1, 8))
 
     address_rows = [
         ["Residential Address", _safe_text(personal.get("residential_address"))],
         ["Permanent Address", _safe_text(personal.get("permanent_address"))],
     ]
-    address_table = Table(address_rows, colWidths=[3.8 * cm, 13.2 * cm])
-    address_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.8, colors.HexColor("#7a7a7a")),
-        ("FONTNAME", (0, 0), (0, -1), "Times-Bold"),
-        ("FONTNAME", (1, 0), (1, -1), "Times-Roman"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
+    address_table = _address_table(address_rows, s)
     elements.append(_section_title("Address Details"))
     elements.append(address_table)
 
@@ -286,7 +398,7 @@ def generate_fee_receipt(student, fees):
     )
     elements = []
 
-    _header(elements, s)
+    _header(elements, s, content_width_cm=17.0)
     elements.append(Paragraph("OFFICIAL FEE RECEIPT", s["center"]))
     elements.append(Spacer(1, 10))
 
@@ -349,7 +461,7 @@ def generate_fee_receipt(student, fees):
     elements.append(Spacer(1, 85))
     _sign_block(elements, s)
     elements.append(Spacer(1, 24))
-    elements.append(_line())
+    elements.append(_line(width_cm=17.0))
     foot = Table([[
         Paragraph("E-mail ID: srivenkateshwara364@gmail.com", s["meta"]),
         Paragraph("Website: www.svpolytechnic.edu.in", s["meta"]),
@@ -373,11 +485,10 @@ def generate_students_list_pdf(students, title_text="Student Records", filter_te
         bottomMargin=1 * cm,
     )
     styles = getSampleStyleSheet()
+    s = _styles()
     elements = []
 
-    elements.append(Paragraph("SRI VENKATESHWARA POLYTECHNIC", ParagraphStyle(
-        "h1", parent=styles["Normal"], fontName="Times-Bold", fontSize=15, alignment=1
-    )))
+    _header(elements, s, content_width_cm=19.0)
     elements.append(Paragraph(title_text, ParagraphStyle(
         "h2", parent=styles["Normal"], fontName="Times-Bold", fontSize=12, alignment=1
     )))
@@ -433,10 +544,10 @@ def generate_results_summary_pdf(rows, filter_text=""):
         file_path, pagesize=A4, leftMargin=1 * cm, rightMargin=1 * cm, topMargin=1 * cm, bottomMargin=1 * cm
     )
     styles = getSampleStyleSheet()
-    elements = [
-        Paragraph("SRI VENKATESHWARA POLYTECHNIC", ParagraphStyle("rt1", parent=styles["Normal"], fontName="Times-Bold", fontSize=15, alignment=1)),
-        Paragraph("Student Result Summary", ParagraphStyle("rt2", parent=styles["Normal"], fontName="Times-Bold", fontSize=12, alignment=1)),
-    ]
+    s = _styles()
+    elements = []
+    _header(elements, s, content_width_cm=19.0)
+    elements.append(Paragraph("Student Result Summary", ParagraphStyle("rt2", parent=styles["Normal"], fontName="Times-Bold", fontSize=12, alignment=1)))
     if filter_text:
         elements.append(Paragraph(filter_text, ParagraphStyle("rt3", parent=styles["Normal"], fontName="Times-Roman", fontSize=9, alignment=1)))
     elements.append(Spacer(1, 8))
@@ -474,11 +585,11 @@ def generate_result_student_pdf(summary, subject_rows):
         file_path, pagesize=A4, leftMargin=1 * cm, rightMargin=1 * cm, topMargin=1 * cm, bottomMargin=1 * cm
     )
     styles = getSampleStyleSheet()
-    elements = [
-        Paragraph("SRI VENKATESHWARA POLYTECHNIC", ParagraphStyle("sr1", parent=styles["Normal"], fontName="Times-Bold", fontSize=15, alignment=1)),
-        Paragraph("Student Result Detail", ParagraphStyle("sr2", parent=styles["Normal"], fontName="Times-Bold", fontSize=12, alignment=1)),
-        Spacer(1, 6),
-    ]
+    s = _styles()
+    elements = []
+    _header(elements, s, content_width_cm=19.0)
+    elements.append(Paragraph("Student Result Detail", ParagraphStyle("sr2", parent=styles["Normal"], fontName="Times-Bold", fontSize=12, alignment=1)))
+    elements.append(Spacer(1, 6))
     info = Table([
         ["Name", str(summary.get("student_name") or "-"), "Reg No", str(summary.get("register_number") or "-")],
         ["Branch", str(summary.get("branch") or "-"), "Sem", str(summary.get("semester_no") or "-")],

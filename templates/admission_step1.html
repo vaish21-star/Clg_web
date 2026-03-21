@@ -90,14 +90,14 @@
         <div id="school-marks" class="form-grid two-col" style="display:none;">
           <input name="maths_marks" placeholder="Maths Marks">
           <input name="science_marks" placeholder="Science Marks">
-          <input name="total_marks" placeholder="Total Marks">
-          <input name="marks_obtained" placeholder="Marks Obtained">
-          <input name="percentage" placeholder="Percentage">
+          <input id="school_total_marks" name="total_marks" placeholder="Total Marks">
+          <input id="school_marks_obtained" name="marks_obtained" placeholder="Marks Obtained">
+          <input id="school_percentage" name="percentage" placeholder="Percentage" step="0.01" inputmode="decimal" readonly>
         </div>
         <div id="commonMarks" class="form-grid two-col" style="display:none;">
-          <input type="number" name="total_marks" placeholder="Total Marks">
-          <input type="number" name="marks_obtained" placeholder="Marks Obtained">
-          <input type="number" name="percentage" placeholder="Percentage">
+          <input type="number" id="common_total_marks" name="total_marks" placeholder="Total Marks">
+          <input type="number" id="common_marks_obtained" name="marks_obtained" placeholder="Marks Obtained">
+          <input type="number" id="common_percentage" name="percentage" placeholder="Percentage" step="0.01" inputmode="decimal" readonly>
         </div>
       </div>
 
@@ -227,8 +227,43 @@
       }
     }
 
+    function updatePercentage(totalEl, obtainedEl, percentEl) {
+      if (!totalEl || !obtainedEl || !percentEl) return;
+      const total = parseFloat(totalEl.value);
+      const obtained = parseFloat(obtainedEl.value);
+      if (!isFinite(total) || total <= 0 || !isFinite(obtained)) {
+        percentEl.value = "";
+        return;
+      }
+      const pct = (obtained / total) * 100;
+      const fixed = pct.toFixed(2);
+      percentEl.value = fixed.replace(/\.00$/, "");
+    }
+
+    function bindPercentageCalc() {
+      const pairs = [
+        ["school_total_marks", "school_marks_obtained", "school_percentage"],
+        ["common_total_marks", "common_marks_obtained", "common_percentage"]
+      ];
+
+      pairs.forEach(([totalId, obtainedId, pctId]) => {
+        const totalEl = document.getElementById(totalId);
+        const obtainedEl = document.getElementById(obtainedId);
+        const percentEl = document.getElementById(pctId);
+        if (!totalEl || !obtainedEl || !percentEl) return;
+
+        const handler = function () {
+          updatePercentage(totalEl, obtainedEl, percentEl);
+        };
+
+        totalEl.addEventListener("input", handler);
+        obtainedEl.addEventListener("input", handler);
+      });
+    }
+
     
     document.addEventListener("DOMContentLoaded", toggleAcademicFields);
+    document.addEventListener("DOMContentLoaded", bindPercentageCalc);
     
   </script>
 </body>

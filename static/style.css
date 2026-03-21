@@ -567,3 +567,72 @@ input, textarea {
   font-size: 12px;
   color: #ff8b8b;
 }
+
+@media (max-width: 720px) {
+  body {
+    align-items: flex-start;
+    padding: 22px 16px 40px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 520px;
+    padding: 28px 22px;
+    border-radius: 16px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  .dashboard {
+    width: 94%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .table-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .employee-page {
+    width: 94%;
+    margin: 18px auto;
+    padding: 18px;
+  }
+
+  .add-employee-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 22px;
+  }
+}
+
+@media (max-width: 520px) {
+  .card {
+    padding: 24px 18px;
+  }
+
+  .employee-filters {
+    gap: 10px;
+  }
+
+  .add-employee-link {
+    width: 100%;
+    text-align: center;
+  }
+}

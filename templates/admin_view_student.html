@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Application | {{ student.admission_id }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
   <style>
     :root {
-      --ink: #1f1f1f;
-      --muted: #363636;
-      --line: #2b2b2b;
+      --ink: #1b2f4a;
+      --muted: #4a5f79;
+      --line: #8ea3bd;
       --panel: #ffffff;
-      --soft: #f8f8f8;
-      --accent: #121212;
+      --soft: #f3f7fc;
+      --accent: #163e6d;
     }
 
     .app-shell {
@@ -29,21 +30,40 @@
 
     .sheet {
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid #b9c9dd;
       border-radius: 14px;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+      box-shadow: 0 14px 34px rgba(7, 25, 44, 0.2);
       overflow: hidden;
-      font-family: "Times New Roman", Times, serif;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    }
+
+    .info-page {
+      border: 1px solid #b9c9dd;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
     }
 
     .sheet-head {
       display: grid;
-      grid-template-columns: 1fr 140px;
+      grid-template-columns: 120px 1fr 140px;
       gap: 12px;
       padding: 14px;
       border-bottom: 1px solid var(--line);
       background: #fff;
-      align-items: start;
+      align-items: center;
+    }
+
+    .official-logo-box {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .official-logo-box img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
     }
 
     .head-main {
@@ -52,28 +72,30 @@
 
     .head-main h1 {
       margin: 0;
-      font-size: 44px;
-      letter-spacing: 0.4px;
+      font-size: 38px;
+      letter-spacing: 0.2px;
       text-transform: uppercase;
-      color: #101010;
+      color: #1a4678;
+      font-weight: 800;
     }
 
     .head-sub {
       margin-top: 2px;
-      font-size: 22px;
-      color: var(--muted);
+      font-size: 20px;
+      color: #2f5a8b;
+      font-weight: 700;
     }
 
     .head-note {
       margin-top: 6px;
-      font-size: 13px;
-      line-height: 1.45;
+      font-size: 12px;
+      line-height: 1.4;
       color: #2d2d2d;
     }
 
     .official-rule {
       height: 0;
-      border-top: 2px solid #1f1f1f;
+      border-top: 2px solid #1f4e8c;
       margin-top: 8px;
     }
 
@@ -81,9 +103,10 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      padding: 10px 14px 6px 14px;
-      font-size: 18px;
+      padding: 10px 14px;
+      font-size: 16px;
       border-bottom: 1px solid var(--line);
+      background: #f5f9ff;
     }
 
     .official-ref-right {
@@ -91,20 +114,21 @@
     }
 
     .photo-box {
-      border: 1px solid var(--line);
+      border: 1px solid #afc0d6;
       border-radius: 8px;
-      background: #fff;
+      background: #f8fbff;
       padding: 8px;
       text-align: center;
       font-size: 11px;
-      color: var(--muted);
+      color: #395775;
+      font-weight: 700;
     }
 
     .photo-box img {
       width: 100%;
       height: 150px;
       object-fit: cover;
-      border: 1px solid var(--line);
+      border: 1px solid #afc0d6;
       border-radius: 6px;
       margin-bottom: 6px;
       background: #f0f4fb;
@@ -114,13 +138,14 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       border-bottom: 1px solid var(--line);
-      background: var(--soft);
+      background: linear-gradient(180deg, #f6f9fe, #eef4fc);
     }
 
     .meta-item {
       padding: 10px 12px;
       border-right: 1px solid var(--line);
-      font-size: 13px;
+      font-size: 14px;
+      color: #234467;
     }
 
     .meta-item:last-child {
@@ -156,12 +181,17 @@
     .section {
       padding: 12px;
       border-bottom: 1px solid var(--line);
+      background: #ffffff;
     }
 
     .section h3 {
       margin: 0 0 8px 0;
+      padding: 3px 10px;
       font-size: 15px;
-      color: #12315f;
+      color: #183f6d;
+      border-left: 4px solid #24588f;
+      background: #f1f7ff;
+      border-radius: 4px;
     }
 
     .kv-grid {
@@ -173,24 +203,27 @@
     .kv {
       display: grid;
       grid-template-columns: 170px 1fr;
-      border: 1px solid var(--line);
+      border: 1px solid #c3d1e2;
       border-radius: 8px;
       overflow: hidden;
       min-height: 40px;
+      background: #fcfdff;
     }
 
     .kv .k {
-      background: #f3f7ff;
+      background: #edf4fc;
       padding: 9px 10px;
       font-weight: 700;
-      font-size: 13px;
-      border-right: 1px solid var(--line);
+      font-size: 12px;
+      border-right: 1px solid #c3d1e2;
+      color: #1e3f66;
     }
 
     .kv .v {
       padding: 9px 10px;
-      font-size: 13px;
+      font-size: 12px;
       word-break: break-word;
+      color: #233f5f;
     }
 
     .kv.full {
@@ -226,15 +259,15 @@
       color: #12315f;
     }
 
-      .doc-page {
-        border: 1px solid var(--line);
+    .doc-page {
+        border: 1px solid #c3d1e2;
         border-radius: 10px;
         padding: 10px;
         margin-bottom: 12px;
         break-inside: avoid-page;
         page-break-inside: avoid;
         page-break-after: always;
-        background: #fff;
+        background: #f8fbff;
       }
 
     .doc-page h4 {
@@ -246,7 +279,7 @@
     .doc-preview,
     .doc-frame {
       width: 100%;
-      border: 1px solid var(--line);
+      border: 1px solid #c3d1e2;
       border-radius: 8px;
       background: #fff;
     }
@@ -270,12 +303,13 @@
     }
 
     .signatures {
-      padding: 45px 14px 18px 14px;
+      padding: 24px 14px 12px 14px;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      font-size: 13px;
+      gap: 22px;
+      font-size: 12px;
       border-top: 1px solid var(--line);
+      background: #f7fbff;
     }
 
     .sign-col {
@@ -288,12 +322,14 @@
     }
 
     .official-footer {
-      border-top: 2px solid #222;
+      border-top: 2px solid #1f4e8c;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      padding: 8px 14px 12px 14px;
-      font-size: 13px;
+      padding: 6px 14px 8px 14px;
+      font-size: 12px;
+      background: #eef4fc;
+      color: #1f436e;
     }
 
     .official-footer .right {
@@ -303,6 +339,9 @@
     @media (max-width: 900px) {
       .sheet-head {
         grid-template-columns: 1fr;
+      }
+      .official-logo-box {
+        justify-content: center;
       }
       .photo-box {
         max-width: 220px;
@@ -324,7 +363,7 @@
     }
 
     @media print {
-      @page { size: A4 portrait; margin: 10mm; }
+      @page { size: A4 portrait; margin: 7mm 8mm 6mm 8mm; }
       body { background: #fff !important; display: block; padding: 0 !important; }
       * {
         -webkit-print-color-adjust: exact;
@@ -337,35 +376,104 @@
         margin: 0 auto !important;
       }
       .sheet {
-        border: 1px solid var(--line) !important;
+        border: none !important;
         border-radius: 0 !important;
         box-shadow: none !important;
+        overflow: visible !important;
+      }
+      .info-page {
+        border: 1px solid #9ab0ca !important;
+        border-radius: 0 !important;
+        height: calc(297mm - 13mm);
+        display: flex;
+        flex-direction: column;
+      }
+      .info-page > .section:last-of-type {
+        flex: 1 1 auto;
       }
       .sheet-head,
       .official-ref-row,
       .meta-strip,
-      .section,
-      .kv,
-      .photo-box,
-      .signatures {
+      .photo-box {
         page-break-inside: avoid;
         break-inside: avoid-page;
       }
+      .sheet-head {
+        grid-template-columns: 80px 1fr 90px;
+        gap: 6px;
+        padding: 5px 6px;
+      }
+      .official-logo-box img {
+        width: 72px;
+        height: 72px;
+      }
+      .photo-box img {
+        height: 90px;
+      }
+      .photo-box {
+        padding: 3px;
+        font-size: 9.5px;
+      }
       .head-main h1 {
-        font-size: 36px;
+        font-size: 21px;
+        line-height: 1.1;
       }
       .head-sub {
-        font-size: 20px;
+        margin-top: 1px;
+        font-size: 12.5px;
+      }
+      .head-note {
+        margin-top: 2px;
+        font-size: 9px;
+        line-height: 1.22;
+      }
+      .official-rule {
+        margin-top: 3px;
       }
       .official-ref-row {
-        font-size: 14px;
+        font-size: 10.5px;
+        padding: 4px 6px;
+      }
+      .meta-item {
+        padding: 4px 6px;
+        font-size: 10px;
+      }
+      .section {
+        padding: 4px 6px;
+      }
+      .section h3 {
+        margin-bottom: 4px;
+        font-size: 10.5px;
+        padding: 2px 7px;
       }
       .kv-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 4px;
+      }
+      .kv {
+        min-height: 21px;
       }
       .kv .k,
       .kv .v {
-        font-size: 12px;
+        font-size: 8.9px;
+        padding: 3px 4px;
+      }
+      .kv {
+        grid-template-columns: 88px 1fr;
+      }
+      .signatures {
+        padding: 10px 8px 5px 8px;
+        gap: 12px;
+        font-size: 9.5px;
+        margin-top: 0;
+      }
+      .sign-line {
+        margin-bottom: 2px;
+      }
+      .official-footer {
+        padding: 3px 8px 4px 8px;
+        font-size: 9.2px;
+        margin-top: 0;
       }
       .docs-pages {
         display: block !important;
@@ -373,7 +481,7 @@
         padding: 0 !important;
       }
       .doc-page {
-        page-break-before: always;
+        page-break-before: auto;
         page-break-after: always;
         break-inside: avoid-page;
         page-break-inside: avoid;
@@ -383,7 +491,10 @@
         margin: 0 0 8px 0 !important;
         background: transparent !important;
       }
-      .doc-frame { height: 980px; }
+      .doc-page:last-child {
+        page-break-after: auto;
+      }
+      .doc-frame { height: 970px; }
       .docs-pages h3,
       .doc-page h4 {
         display: none !important;
@@ -406,7 +517,11 @@
     </div>
 
     <div class="sheet">
+      <div class="info-page">
       <div class="sheet-head">
+        <div class="official-logo-box">
+          <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="College Logo">
+        </div>
         <div class="head-main">
           <h1>Sri Venkateshwara Polytechnic</h1>
           <div class="head-sub">Department of {{ student.branch }}</div>
@@ -522,6 +637,7 @@
         <div>E-mail ID: srivenkateshwara364@gmail.com</div>
         <div class="right">Website: www.svpolytechnic.edu.in</div>
       </div>
+      </div>
 
       <div class="docs-pages">
         <h3>Uploaded Document Pages</h3>
@@ -585,5 +701,6 @@
   </div>
 </body>
 </html>
+
 
 

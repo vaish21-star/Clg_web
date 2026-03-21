@@ -48,3 +48,24 @@ body {
   margin-top: 15px;
   color: #555;
 }
+
+@media (max-width: 640px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    align-items: flex-start;
+    padding: 24px 16px 40px;
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 520px;
+    padding: 28px 22px;
+  }
+
+  .login-box input,
+  .login-box select,
+  .login-box button {
+    font-size: 16px;
+  }
+}

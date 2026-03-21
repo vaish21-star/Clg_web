@@ -104,8 +104,25 @@
         perm.value = res.value;
         perm.setAttribute("readonly", true);
       } else {
-        perm.value = "";
         perm.removeAttribute("readonly");
+      }
+    }
+
+    function bindAddressSync() {
+      const res = document.getElementById("residential_address");
+      const check = document.getElementById("same_address");
+
+      if (!res || !check) return;
+
+      res.addEventListener("input", function () {
+        if (check.checked) {
+          copyAddress();
+        }
+      });
+
+      check.addEventListener("change", copyAddress);
+      if (check.checked) {
+        copyAddress();
       }
     }
 
@@ -134,6 +151,7 @@
         msg.style.color = "green";
       }
     }
+    document.addEventListener("DOMContentLoaded", bindAddressSync);
   </script>
 
 </body>

@@ -8,8 +8,8 @@
 </head>
 <body>
   <div class="card admission-card">
-    <h2>Offline Admission</h2>
-    <p class="subtitle">Same fields as Online Admission (Single Form)</p>
+    <h2>SRI VENKATESHWARA POLYTECHNIC</h2>
+    <p class="subtitle">Offline Admission</p>
 
     <form method="post" enctype="multipart/form-data">
       <div class="form-section">
@@ -93,14 +93,14 @@
         <div id="school-marks" class="form-grid two-col" style="display:none;">
           <input name="maths_marks" placeholder="Maths Marks">
           <input name="science_marks" placeholder="Science Marks">
-          <input name="total_marks" placeholder="Total Marks">
-          <input name="marks_obtained" placeholder="Marks Obtained">
-          <input name="percentage" placeholder="Percentage">
+          <input id="school_total_marks" name="total_marks" placeholder="Total Marks">
+          <input id="school_marks_obtained" name="marks_obtained" placeholder="Marks Obtained">
+          <input id="school_percentage" name="percentage" placeholder="Percentage" step="0.01" inputmode="decimal" readonly>
         </div>
         <div id="commonMarks" class="form-grid two-col" style="display:none;">
-          <input type="number" name="total_marks" placeholder="Total Marks">
-          <input type="number" name="marks_obtained" placeholder="Marks Obtained">
-          <input type="number" name="percentage" placeholder="Percentage">
+          <input type="number" id="common_total_marks" name="total_marks" placeholder="Total Marks">
+          <input type="number" id="common_marks_obtained" name="marks_obtained" placeholder="Marks Obtained">
+          <input type="number" id="common_percentage" name="percentage" placeholder="Percentage" step="0.01" inputmode="decimal" readonly>
         </div>
       </div>
 
@@ -160,10 +160,18 @@
       <div class="form-section">
         <h3 class="section-title">Address Details</h3>
         <div class="form-grid two-col">
-          <textarea name="residential_address" placeholder="Residential Address" rows="3" required></textarea>
-          <textarea name="permanent_address" placeholder="Permanent Address" rows="3" required></textarea>
+          <textarea id="residential_address" name="residential_address" placeholder="Residential Address" rows="3" required></textarea>
+          <textarea id="permanent_address" name="permanent_address" placeholder="Permanent Address" rows="3" required></textarea>
         </div>
       </div>
+      <!-- SAME ADDRESS CHECKBOX -->
+        <div class="same-address">
+          <label class="checkbox-wrap">
+            <input type="checkbox" id="same_address" onchange="copyAddress()">
+            <span class="checkmark"></span>
+            Residential address is same as permanent address
+          </label>
+        </div>
 
       <div class="form-section">
         <h3 class="section-title">Documents & Verification</h3>
@@ -325,7 +333,74 @@
       msg.style.color = ok ? "green" : "red";
     }
 
+    function copyAddress() {
+      const res = document.getElementById("residential_address");
+      const perm = document.getElementById("permanent_address");
+      const check = document.getElementById("same_address");
+
+      if (check && check.checked) {
+        perm.value = res.value;
+        perm.setAttribute("readonly", true);
+      } else {
+        perm.removeAttribute("readonly");
+      }
+    }
+
+    function bindAddressSync() {
+      const res = document.getElementById("residential_address");
+      const check = document.getElementById("same_address");
+
+      if (!res || !check) return;
+
+      res.addEventListener("input", function () {
+        if (check.checked) {
+          copyAddress();
+        }
+      });
+
+      check.addEventListener("change", copyAddress);
+      if (check.checked) {
+        copyAddress();
+      }
+    }
+
+    function updatePercentage(totalEl, obtainedEl, percentEl) {
+      if (!totalEl || !obtainedEl || !percentEl) return;
+      const total = parseFloat(totalEl.value);
+      const obtained = parseFloat(obtainedEl.value);
+      if (!isFinite(total) || total <= 0 || !isFinite(obtained)) {
+        percentEl.value = "";
+        return;
+      }
+      const pct = (obtained / total) * 100;
+      const fixed = pct.toFixed(2);
+      percentEl.value = fixed.replace(/\.00$/, "");
+    }
+
+    function bindPercentageCalc() {
+      const pairs = [
+        ["school_total_marks", "school_marks_obtained", "school_percentage"],
+        ["common_total_marks", "common_marks_obtained", "common_percentage"]
+      ];
+
+      pairs.forEach(([totalId, obtainedId, pctId]) => {
+        const totalEl = document.getElementById(totalId);
+        const obtainedEl = document.getElementById(obtainedId);
+        const percentEl = document.getElementById(pctId);
+        if (!totalEl || !obtainedEl || !percentEl) return;
+
+        const handler = function () {
+          updatePercentage(totalEl, obtainedEl, percentEl);
+        };
+
+        totalEl.addEventListener("input", handler);
+        obtainedEl.addEventListener("input", handler);
+      });
+    }
+
     document.addEventListener("DOMContentLoaded", toggleAcademicFields);
+    document.addEventListener("DOMContentLoaded", bindAddressSync);
+    document.addEventListener("DOMContentLoaded", bindPercentageCalc);
   </script>
 </body>
 </html>
