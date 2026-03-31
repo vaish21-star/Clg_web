@@ -384,6 +384,8 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
 
 
 def generate_fee_receipt(student, fees):
+    student = student or {}
+    fees = fees or {}
     receipt_no = str(fees.get("receipt_no") or student.get("admission_id") or "receipt")
     safe_receipt = "".join(ch for ch in receipt_no if ch.isalnum() or ch in ("-", "_"))
     file_path = f"static/pdfs/fee_receipt_{safe_receipt}.pdf"

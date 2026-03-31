@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fee Receipts | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/student_dashboard.css') }}">
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">Sri Venkateshwara Polytechnic</div>
+    <div class="actions">
+      <a href="/student">Dashboard</a>
+      <a href="/student/admission-letter">Admission Letter (PDF)</a>
+      <a href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="profile-card">
+      <div class="profile-meta">
+        <h1>Fee Receipts</h1>
+        <p>{{ student.student_name }} | {{ student.admission_id }} | {{ student.branch }}</p>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Academic Year</th>
+          <th>Semester</th>
+          <th>Receipt No</th>
+          <th>Download</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in receipts %}
+        <tr>
+          <td>{{ item.payment_date }}</td>
+          <td>{{ item.fee_type }}</td>
+          <td>Rs {{ item.amount }}</td>
+          <td>{{ item.academic_year or "-" }}</td>
+          <td>{{ item.semester_no or "-" }}</td>
+          <td>{{ item.receipt_no }}</td>
+          <td><a href="/student/fees/payment/{{ item.id }}/receipt">Receipt</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">No receipts found yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

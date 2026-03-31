@@ -476,6 +476,47 @@ def ensure_student_personal_extra_columns():
         db.close()
 
 
+def ensure_admission_form_columns():
+    db = get_db()
+    cur = db.cursor()
+    try:
+        def add_col(table, column, col_type):
+            cur.execute(f"SHOW COLUMNS FROM {table} LIKE %s", (column,))
+            if not cur.fetchone():
+                cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+
+        # student_personal_details: admission form extra fields
+        add_col("student_personal_details", "sats_no", "VARCHAR(50) NULL")
+        add_col("student_personal_details", "course_type", "VARCHAR(20) NULL")
+        add_col("student_personal_details", "reserved_category_code", "VARCHAR(20) NULL")
+        add_col("student_personal_details", "caste_name", "VARCHAR(120) NULL")
+        add_col("student_personal_details", "annual_income", "VARCHAR(40) NULL")
+        add_col("student_personal_details", "native_state_code", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "native_district_code", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "sslc_state_code", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "years_studied_karnataka", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "studied_karnataka_medium", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "studied_kannada_medium", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "claim_exemption_5yr", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "exemption_cause_code", "VARCHAR(20) NULL")
+        add_col("student_personal_details", "claim_snq_quota", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "claim_hk_quota", "VARCHAR(10) NULL")
+        add_col("student_personal_details", "special_category", "VARCHAR(20) NULL")
+        add_col("student_personal_details", "postal_address", "TEXT NULL")
+        add_col("student_personal_details", "pin_code", "VARCHAR(10) NULL")
+
+        # education_details: extra marks splits
+        add_col("education_details", "science_maths_max_marks", "INT NULL")
+        add_col("education_details", "science_maths_marks_obtained", "INT NULL")
+
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
 def ensure_qualifying_exam_support():
     db = get_db()
     cur = db.cursor()
@@ -866,9 +907,12 @@ def find_subject_master_by_code(branch, semester_no, course_code, series_name=No
     return None
 
 
+ACADEMIC_YEAR_START_MONTH = 4  # April (admissions typically begin Apr/May)
+
+
 def current_academic_year(today=None):
     today = today or datetime.today().date()
-    start_year = today.year if today.month >= 6 else today.year - 1
+    start_year = today.year if today.month >= ACADEMIC_YEAR_START_MONTH else today.year - 1
     return f"{start_year}-{str((start_year + 1) % 100).zfill(2)}"
 
 
@@ -1029,10 +1073,20 @@ def infer_current_sem(admission_year=None, year_sem=None, today=None):
     if not parsed_admission_year:
         return 1
 
-    # Academic year starts in June: 2023-24 => Jun-2023..May-2024.
-    current_ay_start = today.year if today.month >= 6 else today.year - 1
-    years_elapsed = current_ay_start - parsed_admission_year
-    sem = (years_elapsed * 2) + (1 if today.month >= 6 else 2)
+    # Admissions start in Apr/May. Sem1 runs until Dec.
+    # Sem2 starts from Jan, then semesters advance every 6 months (Jan/Jul).
+    if today.year < parsed_admission_year:
+        return 1
+
+    if today.year == parsed_admission_year:
+        sem = 1
+    elif today.year == parsed_admission_year + 1:
+        sem = 2 if today.month <= 6 else 3
+    elif today.year == parsed_admission_year + 2:
+        sem = 4 if today.month <= 6 else 5
+    else:
+        sem = 6
+
     return min(max(sem, 1), 6)
 
 
@@ -4515,6 +4569,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/admission", methods=["GET", "POST"])
 def admission():
+    ensure_admission_form_columns()
     if request.method == "POST":
         admission_year_text = request.form.get("admission_year", "").strip() or current_academic_year()
         if not re.match(r"^\d{4}-\d{2}$", admission_year_text):
@@ -4647,6 +4702,7 @@ def admission():
 
 @app.route("/admission/step-1", methods=["GET", "POST"])
 def admission_step1():
+    ensure_admission_form_columns()
     if request.method == "POST":
         admission_year = request.form.get("admission_year", "").strip() or current_academic_year()
         if not re.match(r"^\d{4}-\d{2}$", admission_year):
@@ -4657,6 +4713,7 @@ def admission_step1():
             "admission_year": admission_year,
 
             # Student Personal
+            "sats_no": request.form.get("sats_no"),
             "student_name": request.form["student_name"],
             "student_mobile": request.form["student_mobile"],
             "student_email": request.form["student_email"],
@@ -4664,30 +4721,46 @@ def admission_step1():
             "gender": request.form["gender"],
             "indian_nationality": request.form["indian_nationality"],
             "religion": request.form.get("religion"),
+            "reserved_category_code": request.form.get("reserved_category_code"),
+            "caste_name": request.form.get("caste_name"),
             "caste_category": request.form["caste_category"],
             # Student cannot set allotted category in online admission.
             "alloted_category": "PENDING",
 
             # Academic
             # Academic (Dynamic)
-"qualifying_exam": request.form["qualifying_exam"],
-"year_of_passing": request.form["year_of_passing"],
-"register_number": request.form["register_number"],
+            "qualifying_exam": request.form["qualifying_exam"],
+            "year_of_passing": request.form["year_of_passing"],
+            "register_number": request.form["register_number"],
 
-# SSLC / PUC Marks
-"maths_marks": request.form.get("maths_marks"),
-"science_marks": request.form.get("science_marks"),
-"total_marks": request.form.get("total_marks"),
-"marks_obtained": request.form.get("marks_obtained"),
-"percentage": request.form.get("percentage"),
-
-
-
+            # SSLC / PUC Marks
+            "total_max_marks": request.form.get("total_max_marks") or request.form.get("total_marks"),
+            "total_marks_obtained": request.form.get("total_marks_obtained") or request.form.get("marks_obtained"),
+            "science_max_marks": request.form.get("science_max_marks"),
+            "science_marks_obtained": request.form.get("science_marks_obtained") or request.form.get("science_marks"),
+            "maths_max_marks": request.form.get("maths_max_marks"),
+            "maths_marks_obtained": request.form.get("maths_marks_obtained") or request.form.get("maths_marks"),
+            "science_maths_max_marks": request.form.get("science_maths_max_marks"),
+            "science_maths_marks_obtained": request.form.get("science_maths_marks_obtained"),
+            "percentage": request.form.get("percentage"),
 
             # Admission
+            "course_type": request.form.get("course_type"),
             "admission_quota": request.form["admission_quota"],
             "branch": request.form["branch"],
-            "password": request.form["password"]
+            "password": request.form["password"],
+            # Eligibility & Reservation
+            "native_state_code": request.form.get("native_state_code"),
+            "native_district_code": request.form.get("native_district_code"),
+            "sslc_state_code": request.form.get("sslc_state_code"),
+            "years_studied_karnataka": request.form.get("years_studied_karnataka"),
+            "studied_karnataka_medium": request.form.get("studied_karnataka_medium"),
+            "studied_kannada_medium": request.form.get("studied_kannada_medium"),
+            "claim_exemption_5yr": request.form.get("claim_exemption_5yr"),
+            "exemption_cause_code": request.form.get("exemption_cause_code"),
+            "claim_snq_quota": request.form.get("claim_snq_quota"),
+            "claim_hk_quota": request.form.get("claim_hk_quota"),
+            "special_category": request.form.get("special_category"),
         }
 
         session.modified = True
@@ -4714,8 +4787,11 @@ def admission_step2():
             "father_mobile": request.form.get("father_mobile"),
             "mother_name": request.form.get("mother_name").upper(),
             "mother_mobile": request.form.get("mother_mobile"),
+            "annual_income": request.form.get("annual_income"),
             "residential_address": request.form.get("residential_address").upper(),
             "permanent_address": request.form.get("permanent_address").upper(),
+            "postal_address": request.form.get("postal_address").upper() if request.form.get("postal_address") else None,
+            "pin_code": request.form.get("pin_code"),
         })
 
         # VERY IMPORTANT
@@ -4772,6 +4848,7 @@ def admission_step3():
     admission = session.get("admission")
     if not admission:
         return redirect("/admission/step-1")
+    ensure_admission_form_columns()
 
     # =========================
     # POST → VALIDATION & SUBMIT
@@ -4872,9 +4949,15 @@ def admission_step3():
                 father_name, father_mobile,
                 mother_name, mother_mobile,
                 residential_address, permanent_address,
-                aadhaar_number, caste_rd_number, income_rd_number
+                aadhaar_number, caste_rd_number, income_rd_number,
+                sats_no, course_type, reserved_category_code, caste_name, annual_income,
+                native_state_code, native_district_code, sslc_state_code,
+                years_studied_karnataka, studied_karnataka_medium, studied_kannada_medium,
+                claim_exemption_5yr, exemption_cause_code, claim_snq_quota, claim_hk_quota,
+                special_category, postal_address, pin_code
             ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
-                      %s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                      %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             admission["admission_id"],
             admission.get("student_mobile"),
@@ -4898,7 +4981,25 @@ def admission_step3():
             admission["permanent_address"],
             aadhaar_number,
             caste_rd_number,
-            income_rd_number
+            income_rd_number,
+            admission.get("sats_no"),
+            admission.get("course_type"),
+            admission.get("reserved_category_code"),
+            admission.get("caste_name"),
+            admission.get("annual_income"),
+            admission.get("native_state_code"),
+            admission.get("native_district_code"),
+            admission.get("sslc_state_code"),
+            admission.get("years_studied_karnataka"),
+            admission.get("studied_karnataka_medium"),
+            admission.get("studied_kannada_medium"),
+            admission.get("claim_exemption_5yr"),
+            admission.get("exemption_cause_code"),
+            admission.get("claim_snq_quota"),
+            admission.get("claim_hk_quota"),
+            admission.get("special_category"),
+            admission.get("postal_address"),
+            admission.get("pin_code"),
         ))
 
         def _to_int_or_none(value):
@@ -4924,14 +5025,17 @@ def admission_step3():
         maths_marks_obtained = _to_int_or_none(
             admission.get("maths_marks_obtained") or admission.get("maths_marks")
         )
+        science_maths_max_marks = _to_int_or_none(admission.get("science_maths_max_marks"))
+        science_maths_marks_obtained = _to_int_or_none(admission.get("science_maths_marks_obtained"))
 
         cur.execute("""
             INSERT INTO education_details (
                 admission_id, qualifying_exam, register_number, year_of_passing,
                 total_max_marks, total_marks_obtained,
                 science_max_marks, science_marks_obtained,
-                maths_max_marks, maths_marks_obtained
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                maths_max_marks, maths_marks_obtained,
+                science_maths_max_marks, science_maths_marks_obtained
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             admission["admission_id"],
             admission.get("qualifying_exam"),
@@ -4943,6 +5047,8 @@ def admission_step3():
             science_marks_obtained if science_marks_obtained is not None else 0,
             maths_max_marks if maths_max_marks is not None else 0,
             maths_marks_obtained if maths_marks_obtained is not None else 0,
+            science_maths_max_marks if science_maths_max_marks is not None else 0,
+            science_maths_marks_obtained if science_maths_marks_obtained is not None else 0,
         ))
 
         # ===== STEP-3 DETAILS (AADHAAR / RD NUMBERS + FILES) =====
@@ -6492,17 +6598,106 @@ def fee_receipt():
         return redirect("/")
 
     admission_id = session["student"]
+    ensure_fee_module_tables()
     db = get_db()
     cur = db.cursor(dictionary=True)
 
     cur.execute("SELECT * FROM students WHERE admission_id=%s", (admission_id,))
     student = cur.fetchone()
 
-    cur.execute("SELECT * FROM fees WHERE admission_id=%s", (admission_id,))
-    fees = cur.fetchone()
+    cur.execute("""
+        SELECT
+            fp.*,
+            s.student_name,
+            s.branch
+        FROM fee_payments fp
+        JOIN students s ON s.admission_id = fp.admission_id
+        WHERE fp.admission_id=%s
+        ORDER BY fp.payment_date DESC, fp.id DESC
+        LIMIT 1
+    """, (admission_id,))
+    latest_payment = cur.fetchone()
 
-    pdf = generate_fee_receipt(student, fees)
+    fees = None
+    if not latest_payment:
+        cur.execute("SELECT * FROM fees WHERE admission_id=%s", (admission_id,))
+        fees = cur.fetchone()
+
+    cur.close()
+    db.close()
+
+    if not student:
+        return "Student not found", 404
+    if latest_payment:
+        pdf = generate_fee_receipt(
+            {
+                "admission_id": latest_payment["admission_id"],
+                "student_name": latest_payment["student_name"],
+                "branch": latest_payment["branch"],
+            },
+            {
+                "admission_fee": latest_payment["amount"] if latest_payment["fee_type"] == "ADMISSION" else 0,
+                "tuition_fee": latest_payment["amount"] if latest_payment["fee_type"] == "TUITION" else 0,
+                "management_fee": latest_payment["amount"] if latest_payment["fee_type"] == "MANAGEMENT" else 0,
+                "exam_fee": latest_payment["amount"] if latest_payment["fee_type"] == "EXAM" else 0,
+                "payment_type": latest_payment["fee_type"],
+                "payment_status": latest_payment["fee_type"],
+                "receipt_no": latest_payment["receipt_no"],
+                "payment_date": latest_payment["payment_date"],
+                "academic_year": latest_payment.get("academic_year"),
+                "semester_no": latest_payment.get("semester_no"),
+            }
+        )
+    elif fees:
+        pdf = generate_fee_receipt(student, fees)
+    else:
+        return "No payments found for this student", 404
     return send_file(pdf, as_attachment=True)
+
+
+@app.route("/student/fee-receipts")
+def student_fee_receipts():
+    if "student" not in session:
+        return redirect("/")
+
+    admission_id = session["student"]
+    ensure_fee_module_tables()
+
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    cur.execute("""
+        SELECT admission_id, student_name, branch
+        FROM students
+        WHERE admission_id=%s
+    """, (admission_id,))
+    student = cur.fetchone()
+
+    cur.execute("""
+        SELECT
+            id,
+            payment_date,
+            fee_type,
+            amount,
+            receipt_no,
+            academic_year,
+            semester_no
+        FROM fee_payments
+        WHERE admission_id=%s
+        ORDER BY payment_date DESC, id DESC
+    """, (admission_id,))
+    receipts = cur.fetchall()
+    cur.close()
+    db.close()
+
+    if not student:
+        session.clear()
+        return redirect("/login/student")
+
+    return render_template(
+        "student_fee_receipts.html",
+        student=student,
+        receipts=receipts
+    )
 
 
 @app.route("/student/fees/payment/<int:payment_id>/receipt")

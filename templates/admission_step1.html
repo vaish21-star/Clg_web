@@ -23,6 +23,8 @@
         <h3 class="section-title">Student Personal Details</h3>
 
         <div class="form-grid two-col">
+          <input name="sats_no" placeholder="SATS No">
+
           <input name="student_name" placeholder="Student Full Name" required>
 
           <div>
@@ -51,6 +53,10 @@
           </select>
 
           <input name="religion" placeholder="Religion">
+
+          <input name="reserved_category_code" placeholder="Reserved Category Code">
+
+          <input name="caste_name" placeholder="Name of the Caste">
 
           <select name="caste_category" required>
             <option value="">Caste Category</option>
@@ -88,16 +94,97 @@
         </div>
 
         <div id="school-marks" class="form-grid two-col" style="display:none;">
-          <input name="maths_marks" placeholder="Maths Marks">
-          <input name="science_marks" placeholder="Science Marks">
-          <input id="school_total_marks" name="total_marks" placeholder="Total Marks">
-          <input id="school_marks_obtained" name="marks_obtained" placeholder="Marks Obtained">
+          <input name="total_max_marks" id="school_total_max_marks" placeholder="Total Max Marks (All Subjects)">
+          <input name="total_marks_obtained" id="school_total_marks_obtained" placeholder="Total Marks Obtained">
+
+          <input name="science_max_marks" placeholder="Max Marks in Science">
+          <input name="science_marks_obtained" placeholder="Marks Obtained in Science">
+
+          <input name="maths_max_marks" placeholder="Max Marks in Maths">
+          <input name="maths_marks_obtained" placeholder="Marks Obtained in Maths">
+
+          <input name="science_maths_max_marks" placeholder="Max Marks in Science & Maths">
+          <input name="science_maths_marks_obtained" placeholder="Marks Obtained in Science & Maths">
+
           <input id="school_percentage" name="percentage" placeholder="Percentage" step="0.01" inputmode="decimal" readonly>
         </div>
         <div id="commonMarks" class="form-grid two-col" style="display:none;">
-          <input type="number" id="common_total_marks" name="total_marks" placeholder="Total Marks">
-          <input type="number" id="common_marks_obtained" name="marks_obtained" placeholder="Marks Obtained">
+          <input type="number" id="common_total_max_marks" name="total_max_marks" placeholder="Total Max Marks (All Subjects)">
+          <input type="number" id="common_total_marks_obtained" name="total_marks_obtained" placeholder="Total Marks Obtained">
+
+          <input type="number" name="science_max_marks" placeholder="Max Marks in Science">
+          <input type="number" name="science_marks_obtained" placeholder="Marks Obtained in Science">
+
+          <input type="number" name="maths_max_marks" placeholder="Max Marks in Maths">
+          <input type="number" name="maths_marks_obtained" placeholder="Marks Obtained in Maths">
+
+          <input type="number" name="science_maths_max_marks" placeholder="Max Marks in Science & Maths">
+          <input type="number" name="science_maths_marks_obtained" placeholder="Marks Obtained in Science & Maths">
+
           <input type="number" id="common_percentage" name="percentage" placeholder="Percentage" step="0.01" inputmode="decimal" readonly>
+        </div>
+      </div>
+
+      <!-- ================= ELIGIBILITY & RESERVATION ================= -->
+      <div class="form-section">
+        <h3 class="section-title">Eligibility & Reservation Details</h3>
+
+        <div class="form-grid two-col">
+          <input name="native_state_code" placeholder="Code of the Native State">
+          <input name="native_district_code" placeholder="Karnataka: Code of the Native District">
+
+          <input name="sslc_state_code" placeholder="Code of State Appeared for SSLC / Equivalent">
+          <input name="years_studied_karnataka" placeholder="Total Years Studied in Karnataka">
+
+          <select name="studied_karnataka_medium">
+            <option value="">Studied in Karnataka Medium (1st to 10th)</option>
+            <option value="YES">Yes</option>
+            <option value="NO">No</option>
+          </select>
+
+          <select name="studied_kannada_medium">
+            <option value="">Studied in Kannada Medium (1st to 10th)</option>
+            <option value="YES">Yes</option>
+            <option value="NO">No</option>
+          </select>
+
+          <select name="claim_exemption_5yr">
+            <option value="">Claiming Exemption from 5-year Study Rule</option>
+            <option value="YES">Yes</option>
+            <option value="NO">No</option>
+          </select>
+
+          <input name="exemption_cause_code" placeholder="Exemption Cause Code (if applicable)">
+
+          <select name="claim_snq_quota">
+            <option value="">Claiming SNQ Quota Benefit</option>
+            <option value="YES">Yes</option>
+            <option value="NO">No</option>
+          </select>
+
+          <select name="claim_hk_quota">
+            <option value="">Claiming Hyd-Kar Quota Benefit</option>
+            <option value="YES">Yes</option>
+            <option value="NO">No</option>
+          </select>
+
+          <select name="special_category">
+            <option value="">Special Category (if any)</option>
+            <option>NCC</option>
+            <option>JTS</option>
+            <option>JOC</option>
+            <option>EDP</option>
+            <option>DP</option>
+            <option>PS</option>
+            <option>SP</option>
+            <option>S6</option>
+            <option>PH</option>
+            <option>AI</option>
+            <option>CI</option>
+            <option>HK</option>
+            <option>GK</option>
+            <option>ITI</option>
+          </select>
         </div>
       </div>
 
@@ -107,6 +194,8 @@
 
         <div class="form-grid two-col">
           <input name="admission_year" placeholder="Admission Year (YYYY-YY)" value="{{ admission_year }}" required>
+
+          
 
           <select name="admission_quota" required>
             <option value="">Admission Quota</option>
@@ -242,8 +331,8 @@
 
     function bindPercentageCalc() {
       const pairs = [
-        ["school_total_marks", "school_marks_obtained", "school_percentage"],
-        ["common_total_marks", "common_marks_obtained", "common_percentage"]
+        ["school_total_max_marks", "school_total_marks_obtained", "school_percentage"],
+        ["common_total_max_marks", "common_total_marks_obtained", "common_percentage"]
       ];
 
       pairs.forEach(([totalId, obtainedId, pctId]) => {
