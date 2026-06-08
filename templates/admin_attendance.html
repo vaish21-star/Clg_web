@@ -506,7 +506,7 @@
       <input id="attendance-live-search" class="chip search" type="text" placeholder="Search by student name or reg no">
     </section>
 
-    <form method="post" class="attendance-form">
+    <form method="post" class="attendance-form" onsubmit="return confirm('Would you like to save this attendance record?');">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="month" value="{{ filters.month }}">
       <input type="hidden" name="attendance_date" value="{{ filters.attendance_date }}">
@@ -559,7 +559,7 @@
                   {% set st = s.daily_status.get(day) %}
                   <td class="{% if day == selected_day %}selected-day{% endif %} {% if loop.index0 % 7 == 0 %}week-split{% endif %}">
                     {% if st == "PRESENT" or st == "LATE" %}&#10003;
-                    {% elif st == "ABSENT" %}&#10007;
+                    {% elif st == "ABSENT" %}AB
                     {% elif st == "LEAVE" %}L
                     {% else %}-{% endif %}
                   </td>

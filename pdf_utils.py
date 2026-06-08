@@ -5,6 +5,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
@@ -268,6 +269,99 @@ def _photo_box(photo_path, s=None):
     return t
 
 
+def _is_image_file(filename):
+    ext = os.path.splitext(str(filename or ""))[1].lower()
+    return ext in {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+
+
+def _fit_image(path, max_width, max_height):
+    try:
+        reader = ImageReader(path)
+        width, height = reader.getSize()
+        if not width or not height:
+            return Image(path, width=max_width, height=max_height)
+        scale = min(max_width / float(width), max_height / float(height))
+        return Image(path, width=width * scale, height=height * scale)
+    except Exception:
+        return Image(path, width=max_width, height=max_height)
+
+
+def _uploaded_doc_card(title, filename, s, max_width_cm=8.2, max_height_cm=9.8):
+    if not filename:
+        return Table([[Paragraph(title, s["label_cell"]), Paragraph("Not uploaded", s["value_cell"])]], colWidths=[3.0 * cm, 12.5 * cm])
+
+    path = os.path.join("static", "uploads", str(filename))
+    if not os.path.exists(path):
+        return Table([[Paragraph(title, s["label_cell"]), Paragraph(f"Missing file: {_safe_text(filename)}", s["value_cell"])]], colWidths=[3.0 * cm, 12.5 * cm])
+
+    if not _is_image_file(filename):
+        return Table([[
+            Paragraph(title, s["label_cell"]),
+            Paragraph(f"{_safe_text(filename)}<br/><font size='8'>Uploaded as PDF or non-image file</font>", s["value_cell"])
+        ]], colWidths=[3.0 * cm, 12.5 * cm])
+
+    preview = _fit_image(path, max_width_cm * cm, max_height_cm * cm)
+    preview_table = Table(
+        [[preview]],
+        colWidths=[max_width_cm * cm],
+    )
+    preview_table.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#9fb4cf")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fbfdff")),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    caption = Paragraph(_safe_text(filename), ParagraphStyle(
+        "doc_caption",
+        parent=s["small_center"],
+        fontSize=8,
+        leading=9,
+    ))
+
+    outer = Table(
+        [[Paragraph(title, s["label_cell"])], [preview_table], [caption]],
+        colWidths=[max_width_cm * cm],
+    )
+    outer.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#86a6c9")),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+    ]))
+    return outer
+
+
+def _pairwise_tables(items, col_widths):
+    rows = []
+    current = []
+    for item in items:
+        current.append(item)
+        if len(current) == 2:
+            rows.append(current)
+            current = []
+    if current:
+        current.append(Spacer(1, 0))
+        rows.append(current)
+
+    table = Table(rows, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    return table
+
+
 def generate_admission_letter(student, personal=None, education=None, docs=None, fee_summary=None):
     file_path = f"static/pdfs/admission_{student['admission_id']}.pdf"
     doc = SimpleDocTemplate(
@@ -378,6 +472,25 @@ def generate_admission_letter(student, personal=None, education=None, docs=None,
     address_table = _address_table(address_rows, s)
     elements.append(_section_title("Address Details"))
     elements.append(address_table)
+    elements.append(Spacer(1, 8))
+    elements.append(_section_title("Uploaded Documents"))
+    elements.append(_detail_grid([
+        ["Student Photo", _safe_text(docs.get("student_photo")), "Aadhaar File", _safe_text(docs.get("aadhaar_file"))],
+        ["Caste File", _safe_text(docs.get("caste_file")), "Income File", _safe_text(docs.get("income_file"))],
+        ["Marks Card", _safe_text(docs.get("marks_card_file")), "Aadhaar Number", _safe_text(docs.get("aadhaar_number"))],
+        ["Caste RD Number", _safe_text(docs.get("caste_rd_number")), "Income RD Number", _safe_text(docs.get("income_rd_number"))],
+    ], s))
+    elements.append(Spacer(1, 8))
+    elements.append(_section_title("Uploaded Document Images"))
+
+    image_cards = [
+        _uploaded_doc_card("Student Photo", docs.get("student_photo"), s),
+        _uploaded_doc_card("Aadhaar Card", docs.get("aadhaar_file"), s),
+        _uploaded_doc_card("Caste Certificate", docs.get("caste_file"), s),
+        _uploaded_doc_card("Income Certificate", docs.get("income_file"), s),
+        _uploaded_doc_card("Marks Card", docs.get("marks_card_file"), s),
+    ]
+    elements.append(_pairwise_tables(image_cards, [9.35 * cm, 9.35 * cm]))
 
     doc.build(elements)
     return file_path

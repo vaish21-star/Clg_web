@@ -13,11 +13,17 @@
     <h2>Online Admission</h2>
     <p class="subtitle">Step 1 of 3 - Student and Academic Details</p>
 
+    {% if error %}
+    <div style="margin:12px 0;padding:12px 14px;border-radius:8px;background:#fff0f0;border:1px solid #e3a1a1;color:#8b1e1e;font-weight:600;">
+      {{ error }}
+    </div>
+    {% endif %}
+
     <div class="progress-bar">
       <div class="progress-fill step-1"></div>
     </div>
 
-    <form method="post">
+    <form method="post" onsubmit="return confirm('Would you like to submit this application?');">
       <!-- ================= STUDENT PERSONAL DETAILS ================= -->
       <div class="form-section">
         <h3 class="section-title">Student Personal Details</h3>

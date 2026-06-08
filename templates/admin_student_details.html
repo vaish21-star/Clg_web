@@ -45,6 +45,21 @@
           </select>
         {% endif %}
 
+        <select name="sem">
+          <option value="">All Sems</option>
+          <option value="1" {% if filters.sem == "1" %}selected{% endif %}>Sem 1</option>
+          <option value="2" {% if filters.sem == "2" %}selected{% endif %}>Sem 2</option>
+          <option value="3" {% if filters.sem == "3" %}selected{% endif %}>Sem 3</option>
+          <option value="4" {% if filters.sem == "4" %}selected{% endif %}>Sem 4</option>
+          <option value="5" {% if filters.sem == "5" %}selected{% endif %}>Sem 5</option>
+          <option value="6" {% if filters.sem == "6" %}selected{% endif %}>Sem 6</option>
+        </select>
+
+        <select name="sort_by">
+          <option value="name" {% if filters.sort_by == "name" %}selected{% endif %}>Sort by Name</option>
+          <option value="sem" {% if filters.sort_by == "sem" %}selected{% endif %}>Sort by Sem</option>
+        </select>
+
         <button type="submit">Apply</button>
       </form>
     </div>
@@ -59,6 +74,7 @@
               <th>Admission ID</th>
               <th>Reg no</th>
               <th>Branch</th>
+              <th>Sem</th>
               <th>Gender</th>
               <th>DOB</th>
               <th>Mobile no</th>
@@ -80,6 +96,7 @@
                 <td><a class="table-link" href="/admin/student/{{ s.admission_id }}">{{ s.admission_id }}</a></td>
                 <td>{% if s.college_reg_no %}<a class="table-link" href="/admin/student/{{ s.admission_id }}">{{ s.college_reg_no }}</a>{% else %}-{% endif %}</td>
                 <td>{{ s.branch }}</td>
+                <td>{% if s.year_sem %}{{ s.year_sem }}{% else %}-{% endif %}</td>
                 <td>{{ s.gender }}</td>
                 <td>{{ s.dob }}</td>
                 <td>{{ s.mobile }}</td>
@@ -107,7 +124,7 @@
               </tr>
             {% else %}
               <tr>
-                <td colspan="16">No student records found.</td>
+                <td colspan="17">No student records found.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -116,7 +133,7 @@
     </div>
     <div class="table-actions no-print">
       <button type="button" class="table-btn" onclick="window.print()">Print / Save PDF</button>
-      <a class="table-btn" href="/admin/student-details/pdf?q={{ filters.q }}&status={{ filters.status }}&branch={{ filters.branch }}">Download All Students PDF</a>
+      <a class="table-btn" href="/admin/student-details/pdf?q={{ filters.q }}&status={{ filters.status }}&branch={{ filters.branch }}&sort_by={{ filters.sort_by }}&sem={{ filters.sem }}">Download All Students PDF</a>
     </div>
   </div>
 </body>

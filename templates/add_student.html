@@ -11,7 +11,13 @@
     <h2>SRI VENKATESHWARA POLYTECHNIC</h2>
     <p class="subtitle">Offline Admission</p>
 
-    <form method="post" enctype="multipart/form-data">
+    {% if error %}
+    <div style="margin:12px 0;padding:12px 14px;border-radius:8px;background:#fff0f0;border:1px solid #e3a1a1;color:#8b1e1e;font-weight:600;">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" onsubmit="return confirm('Would you like to save these changes?');">
       <div class="form-section">
         <h3 class="section-title">Student Personal Details</h3>
         <div class="form-grid two-col">

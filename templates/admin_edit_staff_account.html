@@ -10,7 +10,7 @@
     <h2>Edit Staff Login Account</h2>
     <p class="subtitle">Update staff account login details</p>
 
-    <form method="post" class="add-employee-form">
+    <form method="post" class="add-employee-form" onsubmit="return confirm('Would you like to update this staff account?');">
       <input type="text" name="employee_name" class="preserve-case" placeholder="Employee Name" value="{{ account.employee_name if account.employee_name else '' }}">
       <input type="email" name="email" class="preserve-case" placeholder="Gmail" value="{{ account.email }}" required>
       <input type="text" name="department" class="preserve-case" placeholder="Department" value="{{ account.department if account.department else '' }}">

@@ -10,7 +10,7 @@
     <h2>{% if edit_mode %}Edit Employee{% else %}Add Employee{% endif %}</h2>
     <p class="subtitle">{% if edit_mode %}Update employee details{% else %}Enter employee details{% endif %}</p>
 
-    <form method="post" class="add-employee-form">
+    <form method="post" class="add-employee-form" onsubmit="return confirm('Would you like to save these changes?');">
       <input type="text" name="employee_name" class="preserve-case" placeholder="Employee Name" value="{{ employee.employee_name if employee else '' }}" required>
 
       {% if is_staff %}

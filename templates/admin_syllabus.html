@@ -128,7 +128,7 @@
     {% if can_manage_syllabus %}
     <div class="employee-filters-card no-print syllabus-panel" style="margin-top: 12px;">
       <h3 class="syllabus-title">Upload Syllabus PDF</h3>
-      <form method="post" enctype="multipart/form-data" class="employee-filters student-filters" id="syllabusUploadForm">
+      <form method="post" enctype="multipart/form-data" class="employee-filters student-filters" id="syllabusUploadForm" onsubmit="return confirm('Would you like to upload this syllabus PDF?');">
         <div class="syllabus-grid">
           {% if is_staff %}
             <input type="text" value="{{ staff_department }}" readonly>

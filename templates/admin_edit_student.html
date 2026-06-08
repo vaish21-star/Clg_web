@@ -10,7 +10,7 @@
     <h2>Edit Student</h2>
     <p class="subtitle">Update student details</p>
 
-    <form method="post" class="add-employee-form">
+    <form method="post" class="add-employee-form" onsubmit="return confirm('Would you like to update this student record?');">
       <input type="text" name="student_name" class="preserve-case" placeholder="Student Name" value="{{ student.student_name }}" required>
 
       <select name="branch" class="preserve-case" required>
@@ -21,7 +21,7 @@
       </select>
 
       <input type="text" name="mobile" class="preserve-case" placeholder="Mobile Number" value="{{ student.mobile }}" required>
-      <input type="text" name="college_reg_no" class="preserve-case" placeholder="College Reg No" value="{{ student.college_reg_no }}">
+      <input type="text" name="college_reg_no" class="preserve-case" placeholder="Student Register number" value="{{ student.college_reg_no }}">
       <input type="text" name="admission_year" class="preserve-case" value="{{ student.admission_year if student.admission_year else '' }}" readonly>
       <input type="number" name="year_sem" min="1" max="6" placeholder="Manual Semester Override (1-6)" value="{{ student.year_sem if student.year_sem else '' }}">
 

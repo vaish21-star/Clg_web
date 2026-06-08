@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Account | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>Admin Account</h2>
+    <p class="subtitle">Set the email used for admin password reset OTP</p>
+    {% if error %}<p style="color:#c62828">{{ error }}</p>{% endif %}
+    {% if message %}<p style="color:#2e7d32">{{ message }}</p>{% endif %}
+    <form method="post" onsubmit="return confirm('Would you like to save this email address?');">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="text" value="{{ admin.username }}" disabled>
+      <input type="email" name="email" value="{{ admin.email }}" placeholder="Temporary or official email">
+      <button type="submit">Save Email</button>
+    </form>
+    <a class="link" href="/admin">Back to Dashboard</a>
+  </div>
+</body>
+</html>

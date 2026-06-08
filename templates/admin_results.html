@@ -85,7 +85,7 @@
 
     {% if can_manage_results %}
     <div class="employee-filters-card no-print" style="margin-top: 12px;">
-      <form method="post" enctype="multipart/form-data" class="employee-filters student-filters">
+      <form method="post" enctype="multipart/form-data" class="employee-filters student-filters" onsubmit="return confirm('Would you like to import this result file?');">
         <select name="import_type">
           <option value="auto">Auto Detect</option>
           <option value="excel">Excel</option>
@@ -123,7 +123,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  <form method="post" action="/admin/results/import/replace" enctype="multipart/form-data">
+                  <form method="post" action="/admin/results/import/replace" enctype="multipart/form-data" onsubmit="return confirm('Would you like to replace the existing imported results?');">
                     <input type="hidden" name="source_file" value="{{ imp.source_file }}">
                     <input type="file" name="replace_file" required>
                     <button type="submit">Replace</button>

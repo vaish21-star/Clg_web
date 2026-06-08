@@ -15,7 +15,7 @@
     <h2>Re-upload Documents</h2>
     <p class="subtitle">Upload only the required documents</p>
 
-    <form action="/admission/upload-documents" method="POST" enctype="multipart/form-data">
+    <form action="/admission/upload-documents" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Would you like to resubmit these documents?');">
       <input type="hidden" name="admission_id" value="{{ admission_id }}">
 
       <div class="form-grid two-col">

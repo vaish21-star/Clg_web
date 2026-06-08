@@ -78,7 +78,7 @@
             </td>
               <td class="no-print">
               {% if student.status != "ACTIVE" %}
-                <form action="{{ url_for('approve_student', admission_id=student.admission_id) }}" method="post" style="display:flex; gap:6px; align-items:center; justify-content:center;">
+                <form action="{{ url_for('approve_student', admission_id=student.admission_id) }}" method="post" style="display:flex; gap:6px; align-items:center; justify-content:center;" onsubmit="return confirm('Would you like to approve this application?');">
                   <input type="hidden" name="status" value="{{ status }}">
                   <input type="hidden" name="q" value="{{ q }}">
                   <input type="hidden" name="branch" value="{{ branch }}">
@@ -105,7 +105,7 @@
             <td class="no-print">
               {% if student.status != "REJECTED" %}
                 <button type="button" class="table-btn reject-btn-sm no-print" onclick="toggleRejectForm('{{ student.admission_id }}')">Reject</button>
-                <form action="/reject/{{ student.admission_id }}" method="post" id="rejectForm-{{ student.admission_id }}" class="reject-form hidden-reject-form no-print">
+                <form action="/reject/{{ student.admission_id }}" method="post" id="rejectForm-{{ student.admission_id }}" class="reject-form hidden-reject-form no-print" onsubmit="return confirm('Would you like to submit this rejection?');">
                   <input type="hidden" name="status" value="{{ status }}">
                   <input type="hidden" name="q" value="{{ q }}">
                   <input type="hidden" name="branch" value="{{ branch }}">

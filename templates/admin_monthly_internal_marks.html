@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Internal Marks | Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="dashboard employee-page student-list-page">
+    <div class="header">
+      <h2>SRI VENKATESHWARA POLYTECHNIC</h2>
+      <p class="subtitle">Add internal 1, internal 2 and other internal assessment marks</p>
+    </div>
+
+    {% if msg %}
+      <div style="background:#eef4ff;border:1px solid #c7d7f7;color:#1d3e73;padding:10px;border-radius:8px;margin-bottom:12px;">
+        {{ msg }}
+      </div>
+    {% endif %}
+
+    <div class="table-actions">
+      <a class="link action-link back-dashboard-link no-print" href="/admin">Back to Dashboard</a>
+    </div>
+
+    <div class="employee-filters-card">
+      <form method="get" action="/admin/monthly-internal-marks" class="employee-filters student-filters no-print" id="mi-search-form">
+        <input
+          type="text"
+          name="admission_id"
+          id="mi-q"
+          class="preserve-case"
+          placeholder="Admission ID / Register No"
+          value="{{ q }}"
+        >
+
+        {% if is_staff %}
+          <input type="text" value="{{ staff_department }}" readonly>
+          <input type="hidden" name="branch" id="mi-branch" value="{{ selected_branch }}">
+        {% else %}
+          <select name="branch" id="mi-branch">
+            <option value="">All Branches</option>
+            {% for b in branch_options %}
+              <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+
+        <select name="semester_no" id="mi-semester">
+          <option value="">All Semesters</option>
+          {% for sem_no in [1,2,3,4,5,6] %}
+            <option value="{{ sem_no }}" {% if selected_semester and selected_semester|string == sem_no|string %}selected{% endif %}>SEM {{ sem_no }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="series" id="mi-series">
+          <option value="">All Series</option>
+          {% for s in series_options %}
+            <option value="{{ s }}" {% if selected_series == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="subject_code" id="mi-subject">
+          {% if selected_subject %}
+            <option value="{{ selected_subject }}" selected>{{ selected_subject }}</option>
+          {% endif %}
+          <option value="">Select Subject</option>
+        </select>
+
+        <button type="submit">Search</button>
+      </form>
+    </div>
+
+    {% if student_results %}
+      <div style="margin:12px 0 16px;">
+        <div style="margin-bottom:8px;font-weight:700;color:#24385f;">Matching Students</div>
+        <div class="applications-table-wrap">
+          <table class="applications-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Admission ID</th>
+                <th>Register No</th>
+                <th>Branch</th>
+                <th>Sem</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in student_results %}
+                <tr>
+                  <td>{{ row.student_name }}</td>
+                  <td>{{ row.admission_id }}</td>
+                  <td>{{ row.student_register_number if row.student_register_number else '-' }}</td>
+                  <td>{{ row.branch }}</td>
+                  <td>SEM {{ row.current_semester }}</td>
+                  <td>
+                    <a class="table-link" href="{{ url_for('admin_monthly_internal_marks', admission_id=row.admission_id, branch=selected_branch, semester_no=selected_semester, series=selected_series, subject_code=selected_subject) }}">Load Student</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if student %}
+      <div style="margin:10px 0 16px;padding:10px;border:1px solid #d5e1f7;background:#f7fbff;border-radius:8px;color:#24385f;">
+        <b>{{ student.student_name }}</b> ({{ student.admission_id }}{% if selected_register_no %} | {{ selected_register_no }}{% endif %}) - {{ student.branch }}
+        {% if selected_semester %} - SEM {{ selected_semester }}{% endif %}
+        {% if selected_series %} - {{ selected_series }}{% endif %}
+      </div>
+
+      <div style="margin:10px 0 12px;padding:10px;border:1px solid #d5e1f7;background:#f7fbff;border-radius:8px;color:#24385f;">
+        <b>Internal Marks Entry</b>
+        <div style="margin-top:6px;font-size:0.95rem;line-height:1.45;">
+          Enter the internal number for the subject, for example <b>1</b> for <b>Internal 1</b> or <b>2</b> for <b>Internal 2</b>.
+        </div>
+      </div>
+
+      <div class="applications-filters" style="grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:10px;">
+        <form method="post" class="academic-save-form monthly-internal-form" onsubmit="return confirm('Would you like to update this student record?');">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="save_assessment">
+          <input type="hidden" name="admission_id" value="{{ student.admission_id }}">
+          <input type="hidden" name="register_number" value="{{ selected_register_no }}">
+          <input type="hidden" name="branch" value="{{ selected_branch }}">
+          <input type="hidden" name="semester_no" value="{{ selected_semester }}">
+          <input type="hidden" name="series" value="{{ selected_series }}">
+          <input type="hidden" name="subject_code" class="js-subject-code-field" value="{{ selected_subject }}">
+          <input type="hidden" name="subject_name" class="js-subject-name-field" value="">
+
+          <input type="date" name="assessment_date" required>
+          <input type="number" name="internal_no" min="1" step="1" placeholder="Internal No" required>
+          <select name="dropbox_type" required>
+            <option value="">Dropbox Type</option>
+            <option value="THEORY">Theory</option>
+            <option value="PRACTICAL">Practical</option>
+            <option value="AUDIT COURSE">Audit Course</option>
+          </select>
+          <input type="number" name="max_marks" min="0" step="0.01" placeholder="Maximum Marks" required>
+          <input type="number" name="marks_obtained" min="0" step="0.01" placeholder="Obtained Marks" required>
+          <input type="text" name="internal_assessment" class="preserve-case" placeholder="Optional label like Internal 1">
+          <input type="text" name="remarks" class="preserve-case" placeholder="Remarks, if any">
+          <button type="submit" class="table-btn">Save Internal Marks</button>
+        </form>
+      </div>
+
+      <div class="applications-table-wrap">
+        <table class="applications-table" style="min-width:980px;">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Internal Assessment</th>
+              <th>Dropbox</th>
+              <th>Maximum Marks</th>
+              <th>Obtained Marks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in records %}
+              <tr>
+                <td>{{ row.assessment_date }}</td>
+                <td>{{ row.internal_assessment }}</td>
+                <td>{{ row.dropbox_type }}</td>
+                <td>{{ row.max_marks }}</td>
+                <td>{{ row.marks_obtained }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="5">No internal marks found for the selected student and subject.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding:12px;border:1px dashed #c7d7f7;border-radius:8px;background:#f7fbff;color:#24385f;margin-top:12px;">
+        Search by Admission ID or Register No after choosing branch, semester, series, and subject. Then open a student to add internal marks.
+      </div>
+    {% endif %}
+
+    <div class="table-actions no-print" style="margin-top:16px;">
+      <a class="table-btn" href="/admin">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script>
+    var monthlySubjectRows = [];
+
+    function getMonthlySelectedSubject() {
+      var subEl = document.getElementById("mi-subject");
+      var found = monthlySubjectRows.find(function(r) {
+        return String(r.course_code || "") === String(subEl && subEl.value ? subEl.value : "");
+      });
+      return found || null;
+    }
+
+    function syncMonthlySubjectMeta() {
+      var selected = getMonthlySelectedSubject();
+      var codeField = document.querySelector(".js-subject-code-field");
+      var nameField = document.querySelector(".js-subject-name-field");
+      if (codeField) {
+        codeField.value = selected ? (selected.course_code || "") : (document.getElementById("mi-subject").value || "");
+      }
+      if (nameField) {
+        nameField.value = selected ? (selected.subject_name || "") : "";
+      }
+    }
+
+    async function loadMonthlySubjects() {
+      var branch = (document.getElementById("mi-branch").value || "").trim();
+      var semester = (document.getElementById("mi-semester").value || "").trim();
+      var series = (document.getElementById("mi-series").value || "").trim();
+      var subEl = document.getElementById("mi-subject");
+      var prev = subEl.value || "";
+      monthlySubjectRows = [];
+      subEl.innerHTML = "";
+
+      if (!branch || !semester || !series) {
+        var optEmpty = document.createElement("option");
+        optEmpty.value = "";
+        optEmpty.textContent = "Select Branch + Sem + Series";
+        subEl.appendChild(optEmpty);
+        syncMonthlySubjectMeta();
+        return;
+      }
+
+      try {
+        var res = await fetch("/admin/api/subjects?branch=" + encodeURIComponent(branch) + "&semester=" + encodeURIComponent(semester) + "&series=" + encodeURIComponent(series));
+        var data = await res.json();
+        monthlySubjectRows = data.subjects || [];
+      } catch (_err) {
+        monthlySubjectRows = [];
+      }
+
+      var base = document.createElement("option");
+      base.value = "";
+      base.textContent = monthlySubjectRows.length ? "Select Subject" : "No subjects found";
+      subEl.appendChild(base);
+
+      monthlySubjectRows.forEach(function(row) {
+        var opt = document.createElement("option");
+        opt.value = row.course_code || "";
+        opt.textContent = row.label || ((row.subject_name || "") + " (" + (row.course_code || "") + ")");
+        subEl.appendChild(opt);
+      });
+
+      if (prev && monthlySubjectRows.some(function(r) { return String(r.course_code || "") === String(prev); })) {
+        subEl.value = prev;
+      }
+
+      syncMonthlySubjectMeta();
+    }
+
+    var branchEl = document.getElementById("mi-branch");
+    var semesterEl = document.getElementById("mi-semester");
+    var seriesEl = document.getElementById("mi-series");
+    var subjectEl = document.getElementById("mi-subject");
+
+    if (branchEl) branchEl.addEventListener("change", loadMonthlySubjects);
+    if (semesterEl) semesterEl.addEventListener("change", loadMonthlySubjects);
+    if (seriesEl) seriesEl.addEventListener("change", loadMonthlySubjects);
+    if (subjectEl) subjectEl.addEventListener("change", syncMonthlySubjectMeta);
+
+    document.querySelectorAll(".monthly-internal-form").forEach(function(form) {
+      form.addEventListener("submit", function(e) {
+        syncMonthlySubjectMeta();
+        var subjectCode = (document.querySelector(".js-subject-code-field").value || "").trim();
+        if (!subjectCode) {
+          e.preventDefault();
+          alert("Please select a valid subject.");
+          return;
+        }
+      });
+    });
+
+    loadMonthlySubjects();
+  </script>
+</body>
+</html>

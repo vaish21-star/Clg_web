@@ -11,7 +11,7 @@
   <h2>Add Student</h2>
   <p class="subtitle">Admin Panel</p>
 
-  <form method="post">
+  <form method="post" onsubmit="return confirm('Would you like to save these changes?');">
     <input type="text" name="admission_id" placeholder="Admission ID" required>
     <input type="text" name="student_name" placeholder="Student Name" required>
 

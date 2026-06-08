@@ -11,7 +11,7 @@
     <p class="subtitle">{{ email }}</p>
     {% if error %}<p style="color:#c62828">{{ error }}</p>{% endif %}
     {% if message %}<p style="color:#1b5e20">{{ message }}</p>{% endif %}
-    <form method="post">
+    <form method="post" onsubmit="return confirm('Would you like to verify and create this staff account?');">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="email" value="{{ email }}">
       <input type="text" name="otp" placeholder="Enter 6-digit OTP" required>

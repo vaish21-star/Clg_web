@@ -92,7 +92,7 @@
 
     {% if can_manage_fees %}
     <div class="employee-filters-card no-print" style="margin-top: 12px;">
-      <form method="post" action="/admin/fees/student/{{ student.admission_id }}/add-payment" class="employee-filters student-filters">
+      <form method="post" action="/admin/fees/student/{{ student.admission_id }}/add-payment" class="employee-filters student-filters" onsubmit="return confirm('Would you like to add this payment entry?');">
         <select name="fee_type" required>
           <option value="ADMISSION">ADMISSION</option>
           <option value="TUITION">TUITION</option>

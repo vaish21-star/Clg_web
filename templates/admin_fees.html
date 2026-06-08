@@ -75,7 +75,7 @@
 
     {% if can_manage_fees %}
     <div class="employee-filters-card no-print" style="margin-top: 12px;">
-      <form method="post" class="employee-filters student-filters">
+      <form method="post" class="employee-filters student-filters" onsubmit="return confirm('Would you like to save this fee structure?');">
         {% if is_staff and not is_management_staff %}
           <input type="text" value="{{ staff_department }}" readonly>
           <input type="hidden" name="fee_branch" value="{{ staff_department }}">

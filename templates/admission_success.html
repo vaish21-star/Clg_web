@@ -5,6 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Application Submitted</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <style>
+    body {
+      background: linear-gradient(180deg, #eff4fb, #dfeaf8);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    }
+    .card {
+      width: min(760px, calc(100vw - 28px));
+      background: #fff;
+      border: 1px solid #c8d7ea;
+      border-radius: 18px;
+      box-shadow: 0 22px 46px rgba(11, 36, 64, 0.15);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #49617e;
+      margin-top: -6px;
+      margin-bottom: 20px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin: 22px 0 10px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(11, 36, 64, 0.12);
+    }
+    .btn.primary {
+      background: #173f6c;
+      color: #fff;
+    }
+    .btn.secondary {
+      background: #eef5ff;
+      color: #173f6c;
+      border-color: #c3d6ef;
+    }
+    .hint {
+      margin-top: 16px;
+      color: #5c7088;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .id-box {
+      margin: 10px auto 0;
+      padding: 10px 14px;
+      width: fit-content;
+      border-radius: 12px;
+      border: 1px solid #cbd9ea;
+      background: #f5f9ff;
+      color: #183c66;
+    }
+  </style>
 </head>
 <body>
   <div class="card">
@@ -12,7 +84,18 @@
     <p class="subtitle">Please wait for admin approval</p>
     <p><b>Your Admission ID:</b></p>
     <h2 style="color:#c59a46">{{ admission_id }}</h2>
-    <a class="link" href="/login">Login</a>
+    <div class="actions">
+      <a class="btn primary" href="{{ url_for('admission_application_view', admission_id=admission_id, token=admission_view_token) }}" target="_blank">Open / Print Application</a>
+      <a class="btn secondary" href="{{ url_for('admission_application_pdf', admission_id=admission_id, token=admission_view_token) }}">Download Application PDF</a>
+      <a class="btn secondary" href="{{ url_for('admission_application_download_all', admission_id=admission_id, token=admission_view_token) }}">Download PDF + Docs</a>
+    </div>
+    <div class="hint">
+      The application view includes your details and uploaded document pages for printing.
+      The PDF download is a clean copy of your admission details, and the ZIP download contains the PDF plus the uploaded files.
+    </div>
+    <div style="margin-top: 18px;">
+      <a class="link" href="/login">Login</a>
+    </div>
   </div>
 </body>
 </html>

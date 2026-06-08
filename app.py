@@ -73,7 +73,7 @@ def load_local_env(env_path=".env"):
 
 def hash_password(password):
     return generate_password_hash(password)
-
+    
 
 def verify_password(stored_hash, raw_password):
     if not stored_hash:
@@ -253,6 +253,22 @@ def ensure_students_college_reg_no_column():
         row = cur.fetchone()
         if not row:
             cur.execute("ALTER TABLE students ADD COLUMN college_reg_no VARCHAR(100) NULL")
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
+def ensure_students_admission_view_token_column():
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("SHOW COLUMNS FROM students LIKE 'admission_view_token'")
+        row = cur.fetchone()
+        if not row:
+            cur.execute("ALTER TABLE students ADD COLUMN admission_view_token VARCHAR(64) NULL")
             db.commit()
     except Exception:
         db.rollback()
@@ -458,6 +474,21 @@ def ensure_students_year_sem_column():
         db.close()
 
 
+def ensure_admin_auth_support():
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("SHOW COLUMNS FROM admins LIKE 'email'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE admins ADD COLUMN email VARCHAR(255) NULL")
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
 def ensure_student_personal_extra_columns():
     db = get_db()
     cur = db.cursor()
@@ -508,6 +539,47 @@ def ensure_admission_form_columns():
         # education_details: extra marks splits
         add_col("education_details", "science_maths_max_marks", "INT NULL")
         add_col("education_details", "science_maths_marks_obtained", "INT NULL")
+
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
+def ensure_register_number_constraints():
+    db = get_db()
+    cur = db.cursor()
+    try:
+        for table in ("student_personal_details", "education_details"):
+            cur.execute(f"SHOW COLUMNS FROM {table} LIKE 'register_number'")
+            if not cur.fetchone():
+                continue
+
+            cur.execute(f"""
+                SELECT COUNT(*)
+                FROM {table}
+                WHERE register_number IS NULL OR TRIM(register_number) = ''
+            """)
+            missing_count = int(cur.fetchone()[0] or 0)
+            if missing_count == 0:
+                try:
+                    cur.execute(f"""
+                        ALTER TABLE {table}
+                        MODIFY COLUMN register_number VARCHAR(50) NOT NULL
+                    """)
+                except Exception:
+                    pass
+
+            index_name = f"uq_{table}_register_number"
+            try:
+                cur.execute(f"""
+                    ALTER TABLE {table}
+                    ADD UNIQUE KEY {index_name} (register_number)
+                """)
+            except Exception:
+                pass
 
         db.commit()
     except Exception:
@@ -786,6 +858,42 @@ def ensure_academic_module_tables():
         db.close()
 
 
+def ensure_monthly_internal_assessments_table():
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS student_monthly_internal_assessments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                admission_id VARCHAR(50) NOT NULL,
+                register_number VARCHAR(50) NOT NULL,
+                branch VARCHAR(120) NOT NULL,
+                semester_no TINYINT NOT NULL,
+                series VARCHAR(40) NOT NULL,
+                subject_code VARCHAR(50) NOT NULL,
+                subject_name VARCHAR(180) NOT NULL,
+                assessment_date DATE NOT NULL,
+                internal_assessment VARCHAR(120) NOT NULL,
+                dropbox_type ENUM('THEORY','PRACTICAL','AUDIT COURSE') NOT NULL,
+                marks_obtained DECIMAL(6,2) NOT NULL DEFAULT 0,
+                max_marks DECIMAL(6,2) NOT NULL DEFAULT 0,
+                min_marks DECIMAL(6,2) NOT NULL DEFAULT 0,
+                remarks TEXT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_monthly_internal_assessment (admission_id, semester_no, subject_code, assessment_date, internal_assessment),
+                KEY idx_monthly_internal_assessment_branch_sem (branch, semester_no),
+                KEY idx_monthly_internal_assessment_register (register_number),
+                KEY idx_monthly_internal_assessment_subject (subject_code)
+            )
+        """)
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
 def ensure_subject_master_table():
     db = get_db()
     cur = db.cursor()
@@ -894,6 +1002,13 @@ def fetch_subject_master_rows(branch=None, semester_no=None, series_name=None):
             if same_department(r.get("branch"), branch) or normalize_branch_key(r.get("branch")) == normalize_branch_key(branch)
         ]
     return rows
+
+
+def subject_default_max_marks(subject_type):
+    subject_type_norm = (subject_type or "").strip().upper()
+    if subject_type_norm == "AUDIT COURSE":
+        return 0, 0
+    return 25, 75
 
 
 def find_subject_master_by_code(branch, semester_no, course_code, series_name=None):
@@ -1216,6 +1331,76 @@ def fetch_student_full_bundle(admission_id):
     return student, personal, education, docs
 
 
+def fetch_admission_view_token(admission_id):
+    ensure_students_admission_view_token_column()
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    try:
+        cur.execute(
+            "SELECT admission_view_token FROM students WHERE admission_id=%s",
+            (admission_id,)
+        )
+        row = cur.fetchone() or {}
+        return (row.get("admission_view_token") or "").strip()
+    finally:
+        cur.close()
+        db.close()
+
+
+def ensure_admission_view_token(admission_id):
+    ensure_students_admission_view_token_column()
+    existing_token = fetch_admission_view_token(admission_id)
+    if existing_token:
+        return existing_token
+
+    admission_view_token = secrets.token_urlsafe(24)
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            "UPDATE students SET admission_view_token=%s WHERE admission_id=%s",
+            (admission_view_token, admission_id)
+        )
+        db.commit()
+    finally:
+        cur.close()
+        db.close()
+    return admission_view_token
+
+
+def admission_public_view_allowed(admission_id):
+    token = (request.args.get("token") or "").strip()
+    stored_token = fetch_admission_view_token(admission_id)
+    if token and stored_token and secrets.compare_digest(token, stored_token):
+        return True
+
+    session_admission_id = (session.get("admission_view_admission_id") or "").strip()
+    session_token = (session.get("admission_view_token") or "").strip()
+    return bool(
+        token
+        and session_admission_id
+        and session_token
+        and session_admission_id == str(admission_id).strip()
+        and token == session_token
+    )
+
+
+def build_admission_documents_zip(admission_id, student, personal, education, docs, fee_summary):
+    zip_path = f"static/uploads/{admission_id}_documents.zip"
+    admission_pdf = generate_admission_letter(student, personal, education, docs, fee_summary)
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        if os.path.exists(admission_pdf):
+            z.write(admission_pdf, os.path.basename(admission_pdf))
+        for filename in (docs or {}).values():
+            if filename:
+                file_path = os.path.join("static/uploads", filename)
+                if os.path.exists(file_path):
+                    z.write(file_path, filename)
+
+    return zip_path
+
+
 def fetch_student_fee_summary(admission_id, student_row):
     if not student_row:
         return None
@@ -1305,6 +1490,60 @@ def ensure_student_attendance_table():
 
 def normalize_subject_name(subject):
     return re.sub(r"\s+", " ", (subject or "").strip())
+
+
+def fetch_daily_attendance_summary_by_subject(admission_id, semester_no, branch=None):
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT
+                subject_name,
+                SUM(CASE WHEN status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) AS present_classes,
+                SUM(CASE WHEN status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_classes,
+                SUM(CASE WHEN status = 'LEAVE' THEN 1 ELSE 0 END) AS leave_classes,
+                COUNT(*) AS total_classes
+            FROM student_daily_attendance
+            WHERE admission_id=%s AND semester_no=%s
+            GROUP BY subject_name
+            ORDER BY subject_name ASC
+        """, (admission_id, semester_no))
+        rows = cur.fetchall()
+
+        subject_code_map = {}
+        if branch:
+            cur.execute("""
+                SELECT subject_name, course_code
+                FROM subjects
+                WHERE branch=%s AND semester=%s
+            """, (branch, semester_no))
+            for srow in cur.fetchall():
+                key = normalize_subject_name(srow.get("subject_name")).lower()
+                if key and key not in subject_code_map:
+                    subject_code_map[key] = (srow.get("course_code") or "").strip().upper()
+    finally:
+        cur.close()
+        db.close()
+
+    summary = {}
+    for row in rows:
+        key = normalize_subject_name(row.get("subject_name")).lower()
+        if not key:
+            continue
+        total_cls = int(row.get("total_classes") or 0)
+        present_cls = int(row.get("present_classes") or 0)
+        absent_cls = int(row.get("absent_classes") or 0)
+        leave_cls = int(row.get("leave_classes") or 0)
+        summary[key] = {
+            "subject_name": row.get("subject_name") or "-",
+            "subject_code": subject_code_map.get(key, "-"),
+            "present_classes": present_cls,
+            "absent_classes": absent_cls,
+            "leave_classes": leave_cls,
+            "total_classes": total_cls,
+            "attendance_pct": round((present_cls / total_cls) * 100, 1) if total_cls > 0 else 0.0,
+        }
+    return summary
 
 
 def same_department(branch_name, department_name):
@@ -2048,13 +2287,13 @@ def login_staff_admin():
                     return render_template("login_staff_admin.html", error=error)
                 if login_type == "management_staff" and not is_management:
                     record_auth_failure("staff_admin_login", identity)
-                    error = "This account is not a Management Staff account."
+                    error = "This account is not a Administration Staff account."
                     cur.close()
                     db.close()
                     return render_template("login_staff_admin.html", error=error)
                 if login_type == "staff" and (is_hod or is_management):
                     record_auth_failure("staff_admin_login", identity)
-                    error = "Use HOD or Management Staff login type for this account."
+                    error = "Use HOD or Administration Staff login type for this account."
                     cur.close()
                     db.close()
                     return render_template("login_staff_admin.html", error=error)
@@ -2084,9 +2323,17 @@ def staff_register():
     department_rows = cur.fetchall()
     departments = [row["department"] for row in department_rows if row.get("department")]
     departments = [d for d in departments if (d or "").strip().lower() != "management"]
-    if "Management Department" not in departments:
-        departments.append("Management Department")
-    departments.sort()
+    normalized_departments = []
+    for d in departments:
+        key = (d or "").strip().lower()
+        if key in {"management department", "management departmnet"}:
+            normalized_departments.append("Administration Department")
+        else:
+            normalized_departments.append(d)
+    departments = sorted(set(normalized_departments))
+    if "Administration Department" not in departments:
+        departments.append("Administration Department")
+        departments.sort()
     cur.close()
     db.close()
 
@@ -2332,6 +2579,89 @@ def forgot_password_staff_verify():
     return render_template("forgot_password_verify.html", email=email, error=error, role_name="Staff")
 
 
+@app.route("/forgot-password/admin", methods=["GET", "POST"])
+def forgot_password_admin():
+    ensure_admin_auth_support()
+    error = ""
+    if request.method == "POST":
+        if not validate_csrf():
+            error = "Session expired. Refresh and try again."
+            return render_template("forgot_password_admin.html", error=error)
+
+        login_id = request.form.get("login_id", "").strip()
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        cur.execute("""
+            SELECT id, username, COALESCE(email, '') AS email
+            FROM admins
+            WHERE LOWER(username)=LOWER(%s) OR LOWER(COALESCE(email, ''))=LOWER(%s)
+            LIMIT 1
+        """, (login_id, login_id))
+        admin = cur.fetchone()
+        cur.close()
+        db.close()
+
+        if not admin:
+            error = "Admin account not found."
+        else:
+            reset_email = (admin.get("email") or "").strip().lower()
+            if not reset_email:
+                if "@" in login_id:
+                    reset_email = login_id.strip().lower()
+                else:
+                    error = "No admin email is configured. Please add an email for this admin account first."
+            if reset_email:
+                otp = start_otp_flow("admin_forgot_password", reset_email, {"admin_id": admin["id"], "username": admin.get("username", "")})
+                sent, msg = send_otp_email(reset_email, "SVP Admin Password Reset OTP", otp)
+                if not sent:
+                    error = msg
+                else:
+                    return redirect(url_for("forgot_password_admin_verify", email=reset_email))
+
+    return render_template("forgot_password_admin.html", error=error)
+
+
+@app.route("/forgot-password/admin/verify", methods=["GET", "POST"])
+def forgot_password_admin_verify():
+    ensure_admin_auth_support()
+    email = request.args.get("email", "").strip().lower() or request.form.get("email", "").strip().lower()
+    error = ""
+    if request.method == "POST":
+        if not validate_csrf():
+            error = "Session expired. Refresh and try again."
+            return render_template("forgot_password_verify.html", email=email, error=error, role_name="Admin")
+
+        otp = request.form.get("otp", "").strip()
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if len(new_password) < 6:
+            error = "Password must be at least 6 characters."
+        elif new_password != confirm_password:
+            error = "Passwords do not match."
+        elif not email:
+            error = "OTP session not found. Please request OTP again."
+        else:
+            ok, msg = verify_otp_flow("admin_forgot_password", email, otp)
+            if not ok:
+                error = msg
+            else:
+                flow = session.get("otp_flow") or {}
+                admin_id = (flow.get("extra") or {}).get("admin_id")
+                db = get_db()
+                cur = db.cursor()
+                cur.execute(
+                    "UPDATE admins SET password_hash=%s WHERE id=%s",
+                    (hash_password(new_password), admin_id)
+                )
+                db.commit()
+                cur.close()
+                db.close()
+                session.pop("otp_flow", None)
+                return redirect(url_for("login_staff_admin"))
+
+    return render_template("forgot_password_verify.html", email=email, error=error, role_name="Admin")
+
+
 # =========================
 # LOGOUT
 # =========================
@@ -2363,6 +2693,67 @@ def admin_dashboard():
         is_hod_staff=is_hod_staff,
         can_manage_fees=can_edit_fees(scope),
         can_manage_syllabus=can_upload_syllabus(scope)
+    )
+
+
+@app.route("/admin/account", methods=["GET", "POST"])
+def admin_account():
+    scope = get_access_scope()
+    if not scope["allowed"]:
+        return redirect("/")
+    if scope["is_staff"]:
+        return "Forbidden: Only admin can update admin account details.", 403
+
+    ensure_admin_auth_support()
+    username = (session.get("admin") or "").strip()
+    if not username:
+        return redirect("/login/staff")
+
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    cur.execute("""
+        SELECT username, COALESCE(email, '') AS email
+        FROM admins
+        WHERE LOWER(username)=LOWER(%s)
+        LIMIT 1
+    """, (username,))
+    admin = cur.fetchone()
+    cur.close()
+    db.close()
+
+    if not admin:
+        session.clear()
+        return redirect("/login/staff")
+
+    error = ""
+    message = ""
+    if request.method == "POST":
+        if not validate_csrf():
+            error = "Session expired. Refresh and try again."
+        else:
+            email = (request.form.get("email") or "").strip().lower()
+            if email and "@" not in email:
+                error = "Enter a valid email address."
+            else:
+                db = get_db()
+                cur = db.cursor()
+                try:
+                    cur.execute(
+                        "UPDATE admins SET email=%s WHERE LOWER(username)=LOWER(%s)",
+                        (email or None, username)
+                    )
+                    db.commit()
+                    message = "Admin email saved successfully."
+                    admin["email"] = email
+                finally:
+                    cur.close()
+                    db.close()
+
+    return render_template(
+        "admin_account.html",
+        admin=admin,
+        error=error,
+        message=message
     )
 
 
@@ -2505,6 +2896,7 @@ def admin_api_subjects():
     rows = fetch_subject_master_rows(branch=branch, semester_no=semester_no, series_name=series_name)
     payload = []
     for row in rows:
+        internal_max, external_max = subject_default_max_marks(row.get("subject_type"))
         payload.append({
             "id": row.get("id"),
             "branch": row.get("branch"),
@@ -2513,6 +2905,8 @@ def admin_api_subjects():
             "subject_name": row.get("subject_name"),
             "course_code": row.get("course_code"),
             "subject_type": row.get("subject_type"),
+            "internal_max": internal_max,
+            "external_max": external_max,
             "label": f"{row.get('subject_name')} ({row.get('course_code')})",
         })
     return jsonify({"subjects": payload})
@@ -3714,10 +4108,19 @@ def admin_student_details():
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "ACTIVE").strip()
     branch = request.args.get("branch", "").strip()
+    sort_by = request.args.get("sort_by", "name").strip()
+    sem = request.args.get("sem", "").strip()
 
     ensure_students_college_reg_no_column()
     ensure_student_personal_extra_columns()
-    students, branches, branch = fetch_admin_student_rows(scope, q=q, status=status, branch=branch)
+    students, branches, branch = fetch_admin_student_rows(
+        scope,
+        q=q,
+        status=status,
+        branch=branch,
+        sort_by=sort_by,
+        sem=sem
+    )
 
     current_year = date.today().year
     academic_year = f"{current_year}-{str((current_year + 1) % 100).zfill(2)}"
@@ -3732,15 +4135,18 @@ def admin_student_details():
         filters={
             "q": q,
             "status": status,
-            "branch": branch
+            "branch": branch,
+            "sort_by": sort_by,
+            "sem": sem
         }
     )
 
 
-def fetch_admin_student_rows(scope, q="", status="ACTIVE", branch=""):
+def fetch_admin_student_rows(scope, q="", status="ACTIVE", branch="", sort_by="name", sem=""):
     if scope.get("is_staff"):
         branch = scope.get("department") or ""
 
+    ensure_students_year_sem_column()
     db = get_db()
     cur = db.cursor(dictionary=True)
     query = """
@@ -3750,6 +4156,7 @@ def fetch_admin_student_rows(scope, q="", status="ACTIVE", branch=""):
             s.branch,
             s.mobile,
             s.status,
+            COALESCE(s.year_sem, NULL) AS year_sem,
             COALESCE(s.college_reg_no, '') AS college_reg_no,
             COALESCE(spd.dob, '-') AS dob,
             COALESCE(spd.gender, '-') AS gender,
@@ -3790,7 +4197,14 @@ def fetch_admin_student_rows(scope, q="", status="ACTIVE", branch=""):
         query += " AND s.branch=%s"
         params.append(branch)
 
-    query += " ORDER BY s.student_name ASC"
+    if sem:
+        query += " AND s.year_sem=%s"
+        params.append(sem)
+
+    if sort_by == "sem":
+        query += " ORDER BY CASE WHEN s.year_sem IS NULL THEN 1 ELSE 0 END, s.year_sem ASC, s.student_name ASC"
+    else:
+        query += " ORDER BY s.student_name ASC"
     cur.execute(query, tuple(params))
     students = cur.fetchall()
 
@@ -3812,7 +4226,16 @@ def admin_student_details_pdf():
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "ACTIVE").strip()
     branch = request.args.get("branch", "").strip()
-    students, _, branch = fetch_admin_student_rows(scope, q=q, status=status, branch=branch)
+    sort_by = request.args.get("sort_by", "name").strip()
+    sem = request.args.get("sem", "").strip()
+    students, _, branch = fetch_admin_student_rows(
+        scope,
+        q=q,
+        status=status,
+        branch=branch,
+        sort_by=sort_by,
+        sem=sem
+    )
 
     filter_parts = []
     if q:
@@ -3821,6 +4244,10 @@ def admin_student_details_pdf():
         filter_parts.append(f"Status: {status}")
     if branch:
         filter_parts.append(f"Branch: {branch}")
+    if sem:
+        filter_parts.append(f"Sem: {sem}")
+    if sort_by == "sem":
+        filter_parts.append("Sort: Sem")
     filter_text = " | ".join(filter_parts)
 
     pdf_path = generate_students_list_pdf(
@@ -4693,9 +5120,11 @@ def admission():
 
         db.commit()
 
+        admission_view_token = ensure_admission_view_token(admission_id)
         return render_template(
             "admission_success.html",
-            admission_id=admission_id
+            admission_id=admission_id,
+            admission_view_token=admission_view_token
         )
 
     return render_template("admission_form.html")
@@ -4707,6 +5136,28 @@ def admission_step1():
         admission_year = request.form.get("admission_year", "").strip() or current_academic_year()
         if not re.match(r"^\d{4}-\d{2}$", admission_year):
             return "Admission year must be in YYYY-YY format (example: 2026-27)", 400
+        register_number = request.form.get("register_number", "").strip().upper()
+        if not register_number:
+            return render_template("admission_step1.html", admission_year=admission_year, error="Register number is required.")
+        ensure_register_number_constraints()
+        db = get_db()
+        cur = db.cursor()
+        try:
+            cur.execute("""
+                SELECT 1
+                FROM student_personal_details
+                WHERE UPPER(TRIM(register_number)) = UPPER(%s)
+                UNION ALL
+                SELECT 1
+                FROM education_details
+                WHERE UPPER(TRIM(register_number)) = UPPER(%s)
+                LIMIT 1
+            """, (register_number, register_number))
+            if cur.fetchone():
+                return render_template("admission_step1.html", admission_year=admission_year, error="Register number already exists.")
+        finally:
+            cur.close()
+            db.close()
 
         session["admission"] = {
             "admission_id": None,
@@ -4731,7 +5182,7 @@ def admission_step1():
             # Academic (Dynamic)
             "qualifying_exam": request.form["qualifying_exam"],
             "year_of_passing": request.form["year_of_passing"],
-            "register_number": request.form["register_number"],
+            "register_number": register_number,
 
             # SSLC / PUC Marks
             "total_max_marks": request.form.get("total_max_marks") or request.form.get("total_marks"),
@@ -4895,6 +5346,10 @@ def admission_step3():
         if admission["qualifying_exam"] not in ["SSLC","CBSE","ICSE", "PUC", "ITI"]:
             return "❌ Invalid Qualifying Exam"
 
+        register_number = (admission.get("register_number") or "").strip().upper()
+        if not register_number:
+            return render_template("admission_step3.html", error="Register number is required.")
+
         # ===== FILES (SAVE IF PROVIDED) =====
         def save_step3_file(file_obj, prefix):
             if not file_obj or file_obj.filename == "":
@@ -4920,6 +5375,21 @@ def admission_step3():
         db = get_db()
         cur = db.cursor()
         ensure_students_admission_year_column()
+        ensure_register_number_constraints()
+        cur.execute("""
+            SELECT 1
+            FROM student_personal_details
+            WHERE UPPER(TRIM(register_number)) = UPPER(%s)
+            UNION ALL
+            SELECT 1
+            FROM education_details
+            WHERE UPPER(TRIM(register_number)) = UPPER(%s)
+            LIMIT 1
+        """, (register_number, register_number))
+        if cur.fetchone():
+            cur.close()
+            db.close()
+            return render_template("admission_step3.html", error="Register number already exists.")
 
         # ===== CREATE STUDENT LOGIN =====
         final_admission_id = insert_student_login_with_retry(
@@ -4957,7 +5427,7 @@ def admission_step3():
                 special_category, postal_address, pin_code
             ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
                       %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
-                      %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             admission["admission_id"],
             admission.get("student_mobile"),
@@ -4971,7 +5441,7 @@ def admission_step3():
             admission["alloted_category"],
             admission["qualifying_exam"],
             admission["year_of_passing"],
-            admission["register_number"],
+            register_number,
             admission["admission_quota"],
             admission["father_name"],
             admission["father_mobile"],
@@ -5039,7 +5509,7 @@ def admission_step3():
         """, (
             admission["admission_id"],
             admission.get("qualifying_exam"),
-            admission.get("register_number"),
+            register_number,
             admission.get("year_of_passing"),
             total_max_marks if total_max_marks is not None else 0,
             total_marks_obtained if total_marks_obtained is not None else 0,
@@ -5127,9 +5597,11 @@ def admission_step3():
         # CLEAR SESSION
         session.pop("admission", None)
 
+        admission_view_token = ensure_admission_view_token(admission["admission_id"])
         return render_template(
             "admission_success.html",
-            admission_id=admission["admission_id"]
+            admission_id=admission["admission_id"],
+            admission_view_token=admission_view_token
         )
 
     # =========================
@@ -5339,6 +5811,8 @@ def admin_academic_records():
     ensure_subject_series_table()
 
     q = (request.args.get("admission_id") or "").strip().upper()
+    filter_branch = (request.args.get("branch") or "").strip()
+    filter_semester = parse_int_prefix(request.args.get("semester_no"))
     msg = request.args.get("msg", "")
 
     if request.method == "POST":
@@ -5361,8 +5835,6 @@ def admin_academic_records():
             if action == "subject":
                 subject_code = (request.form.get("subject_code") or "").strip().upper()
                 subject_name = (request.form.get("subject_name") or "").strip()
-                internal_max = parse_int_prefix(request.form.get("internal_max")) or 25
-                external_max = parse_int_prefix(request.form.get("external_max")) or 75
                 master = find_subject_master_by_code(student_branch, semester_no, subject_code, series_name=series_name)
                 if not master:
                     return redirect(url_for("admin_academic_records", admission_id=admission_id, msg="Select a valid subject from Subject Master."))
@@ -5370,6 +5842,13 @@ def admin_academic_records():
                 subject_code = (master.get("course_code") or "").strip().upper()
                 if not subject_code or not subject_name:
                     return redirect(url_for("admin_academic_records", admission_id=admission_id, msg="Subject code and name are required."))
+                default_internal_max, default_external_max = subject_default_max_marks(master.get("subject_type"))
+                internal_max = parse_int_prefix(request.form.get("internal_max"))
+                external_max = parse_int_prefix(request.form.get("external_max"))
+                if internal_max is None:
+                    internal_max = default_internal_max
+                if external_max is None:
+                    external_max = default_external_max
                 cur.execute("""
                     INSERT INTO student_subjects
                     (admission_id, semester_no, subject_code, subject_name, internal_max, external_max)
@@ -5399,25 +5878,7 @@ def admin_academic_records():
                 """, (admission_id, semester_no, subject_code, internal_marks, external_marks))
                 message = "Marks saved."
             elif action == "attendance":
-                subject_code = (request.form.get("subject_code") or "").strip().upper()
-                total_classes = parse_int_prefix(request.form.get("total_classes")) or 0
-                present_classes = parse_int_prefix(request.form.get("present_classes")) or 0
-                if not subject_code:
-                    return redirect(url_for("admin_academic_records", admission_id=admission_id, msg="Subject code is required for attendance."))
-                master = find_subject_master_by_code(student_branch, semester_no, subject_code, series_name=series_name)
-                if not master:
-                    return redirect(url_for("admin_academic_records", admission_id=admission_id, msg="Select a valid subject from Subject Master."))
-                if present_classes > total_classes:
-                    return redirect(url_for("admin_academic_records", admission_id=admission_id, msg="Present classes cannot be greater than total classes."))
-                cur.execute("""
-                    INSERT INTO student_attendance
-                    (admission_id, semester_no, subject_code, total_classes, present_classes)
-                    VALUES (%s,%s,%s,%s,%s)
-                    ON DUPLICATE KEY UPDATE
-                        total_classes=VALUES(total_classes),
-                        present_classes=VALUES(present_classes)
-                """, (admission_id, semester_no, subject_code, total_classes, present_classes))
-                message = "Attendance saved."
+                message = "Attendance is fetched automatically from the main attendance module."
             else:
                 return redirect(url_for("admin_academic_records", admission_id=admission_id, msg="Invalid academic action."))
             db.commit()
@@ -5430,10 +5891,26 @@ def admin_academic_records():
     student = None
     records = []
     default_semester = 1
+    student_results = []
     if q:
         db = get_db()
         cur = db.cursor(dictionary=True)
-        cur.execute("SELECT admission_id, student_name, branch, year_sem, admission_year FROM students WHERE admission_id=%s", (q,))
+        cur.execute("""
+            SELECT
+                s.admission_id,
+                s.student_name,
+                s.branch,
+                s.year_sem,
+                s.admission_year,
+                COALESCE(NULLIF(s.college_reg_no, ''), NULLIF(spd.register_number, '')) AS student_register_number
+            FROM students s
+            LEFT JOIN student_personal_details spd
+                ON spd.admission_id = s.admission_id
+            WHERE UPPER(s.admission_id)=UPPER(%s)
+               OR UPPER(COALESCE(s.college_reg_no, ''))=UPPER(%s)
+               OR UPPER(COALESCE(spd.register_number, ''))=UPPER(%s)
+            LIMIT 1
+            """, (q, q, q))
         student = cur.fetchone()
         if student and scope["is_staff"] and (student.get("branch") or "").strip().lower() != (scope["department"] or "").strip().lower():
             cur.close()
@@ -5451,35 +5928,415 @@ def admin_academic_records():
                     ss.internal_max,
                     ss.external_max,
                     COALESCE(sm.internal_marks, 0) AS internal_marks,
-                    COALESCE(sm.external_marks, 0) AS external_marks,
-                    COALESCE(sa.total_classes, 0) AS total_classes,
-                    COALESCE(sa.present_classes, 0) AS present_classes
+                    COALESCE(sm.external_marks, 0) AS external_marks
                 FROM student_subjects ss
                 LEFT JOIN student_internal_marks sm
                     ON sm.admission_id=ss.admission_id
                     AND sm.semester_no=ss.semester_no
                     AND sm.subject_code=ss.subject_code
-                LEFT JOIN student_attendance sa
-                    ON sa.admission_id=ss.admission_id
-                    AND sa.semester_no=ss.semester_no
-                    AND sa.subject_code=ss.subject_code
                 WHERE ss.admission_id=%s AND ss.semester_no=%s
                 ORDER BY ss.subject_name ASC
             """, (q, semester_no))
             records = cur.fetchall()
+            attendance_summary_by_subject = fetch_daily_attendance_summary_by_subject(student["admission_id"], semester_no, student.get("branch"))
+            for row in records:
+                key = normalize_subject_name(row.get("subject_name")).lower()
+                code_key = (row.get("subject_code") or "").strip().upper()
+                att = attendance_summary_by_subject.get(key, {})
+                if not att and code_key != "-":
+                    att = next((v for v in attendance_summary_by_subject.values() if (v.get("subject_code") or "").strip().upper() == code_key), {})
+                row["present_classes"] = att.get("present_classes", 0)
+                row["absent_classes"] = att.get("absent_classes", 0)
+                row["leave_classes"] = att.get("leave_classes", 0)
+                row["total_classes"] = att.get("total_classes", 0)
+                row["attendance_pct"] = att.get("attendance_pct", 0.0)
 
         cur.close()
         db.close()
+    elif filter_branch or filter_semester:
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            query = """
+                SELECT
+                    s.admission_id,
+                    s.student_name,
+                    s.branch,
+                    s.year_sem,
+                    s.admission_year,
+                    COALESCE(NULLIF(s.college_reg_no, ''), NULLIF(spd.register_number, '')) AS student_register_number
+                FROM students s
+                LEFT JOIN student_personal_details spd
+                    ON spd.admission_id = s.admission_id
+                WHERE 1=1
+            """
+            params = []
+            if filter_branch:
+                query += " AND s.branch=%s"
+                params.append(filter_branch)
+            query += " ORDER BY s.student_name ASC, s.admission_id ASC"
+            cur.execute(query, tuple(params))
+            rows = cur.fetchall()
+            for row in rows:
+                sem_no = infer_current_sem(row.get("admission_year"), row.get("year_sem"))
+                row["current_semester"] = sem_no
+                if filter_semester and sem_no != filter_semester:
+                    continue
+                student_results.append(row)
+        finally:
+            cur.close()
+            db.close()
 
     return render_template(
         "admin_academic_records.html",
         q=q,
+        filter_branch=filter_branch,
+        filter_semester=filter_semester,
         student=student,
         records=records,
+        student_results=student_results,
         default_semester=default_semester,
         branch_options=BRANCH_OPTIONS,
         series_options=fetch_subject_series_options(),
         msg=msg,
+        is_staff=scope["is_staff"],
+        staff_department=scope["department"],
+    )
+
+
+@app.route("/admin/monthly-internal-marks", methods=["GET", "POST"])
+def admin_monthly_internal_marks():
+    scope = get_access_scope()
+    if not scope["allowed"]:
+        return redirect("/")
+
+    ensure_academic_module_tables()
+    ensure_subject_master_table()
+    ensure_subject_series_table()
+    ensure_monthly_internal_assessments_table()
+
+    q = (request.args.get("admission_id") or request.args.get("register_no") or "").strip().upper()
+    branch_filter = (request.args.get("branch") or "").strip()
+    semester_filter = parse_int_prefix(request.args.get("semester_no"))
+    series_filter = (request.args.get("series") or "").strip().upper()
+    subject_filter = (request.args.get("subject_code") or "").strip().upper()
+    msg = request.args.get("msg", "")
+
+    if scope["is_staff"]:
+        branch_filter = scope.get("department") or branch_filter
+
+    student = None
+    student_results = []
+    records = []
+    selected_branch = branch_filter
+    selected_semester = semester_filter
+    selected_series = series_filter
+    selected_subject = subject_filter
+    selected_register_no = ""
+    subject_options = []
+    series_options = fetch_subject_series_options()
+
+    if request.method == "POST":
+        if not validate_csrf():
+            return redirect(url_for("admin_monthly_internal_marks", msg="Session expired. Refresh and try again."))
+        action = (request.form.get("action") or "save_assessment").strip().lower()
+        admission_id = (request.form.get("admission_id") or "").strip().upper()
+        register_number = (request.form.get("register_number") or "").strip().upper()
+        branch = (request.form.get("branch") or "").strip()
+        semester_no = parse_int_prefix(request.form.get("semester_no")) or 1
+        series_name = (request.form.get("series") or "").strip().upper()
+        subject_code = (request.form.get("subject_code") or "").strip().upper()
+        assessment_date = (request.form.get("assessment_date") or "").strip()
+        internal_assessment = (request.form.get("internal_assessment") or "").strip()
+        internal_no = parse_int_prefix(request.form.get("internal_no"))
+        dropbox_type = (request.form.get("dropbox_type") or "").strip().upper()
+        remarks = (request.form.get("remarks") or "").strip()
+
+        if not internal_assessment and internal_no is not None:
+            internal_assessment = f"Internal {internal_no}"
+        elif internal_assessment.isdigit():
+            internal_assessment = f"Internal {internal_assessment}"
+
+        def to_float_or_none(value):
+            text = str(value or "").strip()
+            if not text:
+                return None
+            try:
+                return float(text)
+            except ValueError:
+                return None
+
+        marks_obtained = to_float_or_none(request.form.get("marks_obtained"))
+        max_marks = to_float_or_none(request.form.get("max_marks"))
+        min_marks = to_float_or_none(request.form.get("min_marks"))
+
+        if action != "save_assessment":
+            return redirect(url_for("admin_monthly_internal_marks", msg="Invalid action."))
+        if not admission_id and not register_number:
+            return redirect(url_for("admin_monthly_internal_marks", msg="Admission ID or register number is required."))
+
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute("""
+                SELECT
+                    s.admission_id,
+                    s.student_name,
+                    s.branch,
+                    s.year_sem,
+                    s.admission_year,
+                    COALESCE(NULLIF(s.college_reg_no, ''), NULLIF(spd.register_number, '')) AS student_register_number
+                FROM students s
+                LEFT JOIN student_personal_details spd
+                    ON spd.admission_id = s.admission_id
+                WHERE 1=1
+            """)
+            student_rows = cur.fetchall()
+            for row in student_rows:
+                row_reg = (row.get("admission_id") or "").strip().upper()
+                row_student_reg = (row.get("student_register_number") or "").strip().upper()
+                if admission_id and row_reg != admission_id:
+                    continue
+                if register_number and register_number not in {row_reg, row_student_reg}:
+                    continue
+                student = row
+                break
+
+            if not student:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", msg="Student not found."))
+
+            if scope["is_staff"] and not same_department(student.get("branch"), scope.get("department")):
+                cur.close()
+                db.close()
+                return "Forbidden: You can edit only your department students.", 403
+
+            branch = student.get("branch") or branch
+            selected_branch = branch
+            selected_semester = semester_no
+            selected_series = series_name or selected_series
+            selected_register_no = student.get("student_register_number") or register_number or ""
+
+            if not branch or not series_name or semester_no < 1 or semester_no > 6:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", admission_id=student["admission_id"], msg="Branch, semester, and series are required."))
+            if not subject_code:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", admission_id=student["admission_id"], branch=branch, semester_no=semester_no, series=series_name, msg="Subject is required."))
+            if not assessment_date:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", admission_id=student["admission_id"], branch=branch, semester_no=semester_no, series=series_name, msg="Assessment date is required."))
+            if not internal_assessment:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", admission_id=student["admission_id"], branch=branch, semester_no=semester_no, series=series_name, msg="Internal assessment is required."))
+            if dropbox_type not in {"THEORY", "PRACTICAL", "AUDIT COURSE"}:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", admission_id=student["admission_id"], branch=branch, semester_no=semester_no, series=series_name, msg="Select a valid dropbox type."))
+
+            subject = find_subject_master_by_code(branch, semester_no, subject_code, series_name=series_name)
+            if not subject:
+                cur.close()
+                db.close()
+                return redirect(url_for("admin_monthly_internal_marks", admission_id=student["admission_id"], branch=branch, semester_no=semester_no, series=series_name, msg="Select a valid subject from Subject Master."))
+
+            subject_name = (subject.get("subject_name") or "").strip()
+            subject_type = (subject.get("subject_type") or "").strip().upper()
+            if max_marks is None:
+                max_marks = 0 if subject_type == "AUDIT COURSE" else 25
+            if min_marks is None:
+                min_marks = 0
+
+            cur.execute("""
+                INSERT INTO student_monthly_internal_assessments (
+                    admission_id,
+                    register_number,
+                    branch,
+                    semester_no,
+                    series,
+                    subject_code,
+                    subject_name,
+                    assessment_date,
+                    internal_assessment,
+                    dropbox_type,
+                    marks_obtained,
+                    max_marks,
+                    min_marks,
+                    remarks
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON DUPLICATE KEY UPDATE
+                    register_number=VALUES(register_number),
+                    branch=VALUES(branch),
+                    series=VALUES(series),
+                    subject_name=VALUES(subject_name),
+                    dropbox_type=VALUES(dropbox_type),
+                    marks_obtained=VALUES(marks_obtained),
+                    max_marks=VALUES(max_marks),
+                    min_marks=VALUES(min_marks),
+                    remarks=VALUES(remarks)
+            """, (
+                student["admission_id"],
+                selected_register_no or register_number,
+                branch,
+                semester_no,
+                series_name,
+                subject_code,
+                subject_name,
+                assessment_date,
+                internal_assessment,
+                dropbox_type,
+                marks_obtained if marks_obtained is not None else 0,
+                max_marks if max_marks is not None else 0,
+                min_marks if min_marks is not None else 0,
+                remarks,
+            ))
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            return redirect(url_for(
+                "admin_monthly_internal_marks",
+                admission_id=admission_id or register_number,
+                branch=branch,
+                semester_no=semester_no,
+                series=series_name,
+                subject_code=subject_code,
+                msg=f"Unable to save monthly internal marks: {exc}"
+            ))
+        finally:
+            cur.close()
+            db.close()
+
+        return redirect(url_for(
+            "admin_monthly_internal_marks",
+            admission_id=student["admission_id"],
+            branch=branch,
+            semester_no=semester_no,
+            series=series_name,
+            subject_code=subject_code,
+            msg="Monthly internal marks saved successfully."
+        ))
+
+    if q:
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute("""
+                SELECT
+                    s.admission_id,
+                    s.student_name,
+                    s.branch,
+                    s.year_sem,
+                    s.admission_year,
+                    COALESCE(NULLIF(s.college_reg_no, ''), NULLIF(spd.register_number, '')) AS student_register_number
+                FROM students s
+                LEFT JOIN student_personal_details spd
+                    ON spd.admission_id = s.admission_id
+                WHERE UPPER(s.admission_id)=UPPER(%s)
+                   OR UPPER(COALESCE(s.college_reg_no, ''))=UPPER(%s)
+                   OR UPPER(COALESCE(spd.register_number, ''))=UPPER(%s)
+                LIMIT 1
+            """, (q, q, q))
+            student = cur.fetchone()
+        finally:
+            cur.close()
+            db.close()
+
+        if student:
+            selected_branch = student.get("branch") or selected_branch
+            selected_semester = semester_filter or infer_current_sem(student.get("admission_year"), student.get("year_sem"))
+            selected_register_no = student.get("student_register_number") or ""
+
+    if selected_branch and selected_semester and selected_series:
+        subject_options = fetch_subject_master_rows(
+            branch=selected_branch,
+            semester_no=selected_semester,
+            series_name=selected_series,
+        )
+
+    if not student and (selected_branch or selected_semester):
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            query = """
+                SELECT
+                    s.admission_id,
+                    s.student_name,
+                    s.branch,
+                    s.year_sem,
+                    s.admission_year,
+                    COALESCE(NULLIF(s.college_reg_no, ''), NULLIF(spd.register_number, '')) AS student_register_number
+                FROM students s
+                LEFT JOIN student_personal_details spd
+                    ON spd.admission_id = s.admission_id
+                WHERE 1=1
+            """
+            params = []
+            if selected_branch:
+                query += " AND s.branch=%s"
+                params.append(selected_branch)
+            query += " ORDER BY s.student_name ASC, s.admission_id ASC"
+            cur.execute(query, tuple(params))
+            for row in cur.fetchall():
+                row["current_semester"] = infer_current_sem(row.get("admission_year"), row.get("year_sem"))
+                if selected_semester and row["current_semester"] != selected_semester:
+                    continue
+                student_results.append(row)
+        finally:
+            cur.close()
+            db.close()
+
+    if student:
+        selected_branch = student.get("branch") or selected_branch
+        selected_semester = selected_semester or infer_current_sem(student.get("admission_year"), student.get("year_sem"))
+        if selected_branch and selected_semester and selected_series:
+            subject_options = fetch_subject_master_rows(
+                branch=selected_branch,
+                semester_no=selected_semester,
+                series_name=selected_series,
+            )
+
+        db = get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            if selected_subject:
+                cur.execute("""
+                    SELECT *
+                    FROM student_monthly_internal_assessments
+                    WHERE admission_id=%s AND UPPER(subject_code)=UPPER(%s)
+                    ORDER BY assessment_date DESC, id DESC
+                """, (student["admission_id"], selected_subject))
+            else:
+                cur.execute("""
+                    SELECT *
+                    FROM student_monthly_internal_assessments
+                    WHERE admission_id=%s
+                    ORDER BY assessment_date DESC, id DESC
+                """, (student["admission_id"],))
+            records = cur.fetchall()
+        finally:
+            cur.close()
+            db.close()
+
+    return render_template(
+        "admin_monthly_internal_marks.html",
+        q=q,
+        msg=msg,
+        student=student,
+        student_results=student_results,
+        records=records,
+        branch_options=BRANCH_OPTIONS,
+        series_options=series_options,
+        subject_options=subject_options,
+        selected_branch=selected_branch,
+        selected_semester=selected_semester,
+        selected_series=selected_series,
+        selected_subject=selected_subject,
+        selected_register_no=selected_register_no,
         is_staff=scope["is_staff"],
         staff_department=scope["department"],
     )
@@ -5578,7 +6435,14 @@ def add_student():
         if can_set_alloted and not alloted_category:
             return "Alloted category is required for Admin/Management admission entry", 400
         if not register_number or not year_of_passing:
-            return "Register number and year of passing are required", 400
+            return render_template(
+                "add_student.html",
+                is_staff=scope["is_staff"],
+                staff_department=scope["department"],
+                can_set_alloted_category=can_set_alloted,
+                admission_year=admission_year_text,
+                error="Register number and year of passing are required."
+            )
         if not admission_quota:
             return "Admission quota is required", 400
         if not father_name or not father_mobile or not mother_name:
@@ -5609,6 +6473,26 @@ def add_student():
         db = get_db()
         cur = db.cursor(dictionary=True)
         try:
+            ensure_register_number_constraints()
+            cur.execute("""
+                SELECT 1
+                FROM student_personal_details
+                WHERE UPPER(TRIM(register_number)) = UPPER(%s)
+                UNION ALL
+                SELECT 1
+                FROM education_details
+                WHERE UPPER(TRIM(register_number)) = UPPER(%s)
+                LIMIT 1
+            """, (register_number, register_number))
+            if cur.fetchone():
+                return render_template(
+                    "add_student.html",
+                    is_staff=scope["is_staff"],
+                    staff_department=scope["department"],
+                    can_set_alloted_category=can_set_alloted,
+                    admission_year=admission_year_text,
+                    error="Register number already exists."
+                )
             ensure_qualifying_exam_support()
             ensure_students_admission_year_column()
             ensure_students_year_sem_column()
@@ -6774,6 +7658,63 @@ def admin_view_student(admission_id):
     )
 
 
+@app.route("/admission/application/<admission_id>")
+def admission_application_view(admission_id):
+    if not admission_public_view_allowed(admission_id):
+        return "Forbidden: invalid or expired application link.", 403
+
+    student, personal, education, docs = fetch_student_full_bundle(admission_id)
+    if not student:
+        return "Student not found", 404
+    fee_summary = fetch_student_fee_summary(admission_id, student)
+
+    return render_template(
+        "admin_view_student.html",
+        student=student,
+        personal=personal,
+        education=education,
+        docs=docs,
+        fee_summary=fee_summary,
+        print_date=datetime.today().strftime("%d-%m-%Y"),
+        public_view=True,
+        view_token=request.args.get("token")
+    )
+
+
+@app.route("/admission/application/<admission_id>/admission-pdf")
+def admission_application_pdf(admission_id):
+    if not admission_public_view_allowed(admission_id):
+        return "Forbidden: invalid or expired application link.", 403
+
+    student, personal, education, docs = fetch_student_full_bundle(admission_id)
+    if not student:
+        return "Student not found", 404
+    fee_summary = fetch_student_fee_summary(admission_id, student)
+    pdf = generate_admission_letter(student, personal, education, docs, fee_summary)
+    return send_file(pdf, as_attachment=True, download_name=f"admission_{admission_id}.pdf")
+
+
+@app.route("/admission/application/<admission_id>/download-all")
+def admission_application_download_all(admission_id):
+    if not admission_public_view_allowed(admission_id):
+        return "Forbidden: invalid or expired application link.", 403
+
+    student, personal, education, docs = fetch_student_full_bundle(admission_id)
+    if not student:
+        return "Student not found", 404
+    fee_summary = fetch_student_fee_summary(admission_id, student)
+
+    if not any(docs.values()):
+        return "No documents found for this admission ID", 404
+
+    zip_path = build_admission_documents_zip(admission_id, student, personal, education, docs, fee_summary)
+    return send_file(
+        zip_path,
+        as_attachment=True,
+        download_name=f"admission_{admission_id}_documents.zip"
+    )
+
+
 @app.route("/admin/student/<admission_id>/admission-pdf")
 def admin_student_admission_pdf(admission_id):
     scope = get_access_scope()
@@ -6875,18 +7816,7 @@ def download_all_docs(admission_id):
     if not any(docs.values()):
         return "No documents found for this admission ID", 404
 
-    zip_path = f"static/uploads/{admission_id}_documents.zip"
-    admission_pdf = generate_admission_letter(student, personal, education, docs, fee_summary)
-
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
-        if os.path.exists(admission_pdf):
-            z.write(admission_pdf, os.path.basename(admission_pdf))
-        for filename in docs.values():
-            if filename:
-                file_path = os.path.join("static/uploads", filename)
-                if os.path.exists(file_path):
-                    z.write(file_path, filename)
-
+    zip_path = build_admission_documents_zip(admission_id, student, personal, education, docs, fee_summary)
     return send_file(zip_path, as_attachment=True)
 # imports
 import os
@@ -7076,11 +8006,16 @@ def upload_documents():
     db.close()
 
     # 6️⃣ clear session & show success
+    admission_view_token = ensure_admission_view_token(admission_id)
+
+    session["admission_view_admission_id"] = admission_id
+    session["admission_view_token"] = admission_view_token
     session.pop("admission", None)
 
     return render_template(
         "admission_success.html",
-        admission_id=admission_id
+        admission_id=admission_id,
+        admission_view_token=admission_view_token
     )
 
 

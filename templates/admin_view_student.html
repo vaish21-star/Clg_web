@@ -511,9 +511,14 @@
   <div class="app-shell">
     <div class="top-bar no-print">
       <button type="button" class="btn primary" onclick="window.print()">Print / Save PDF</button>
-      <a href="/admin/student/{{ student.admission_id }}/admission-pdf" class="btn secondary">Download Admission PDF</a>
-      <a href="/admin/download-all/{{ student.admission_id }}" class="btn secondary">Download Documents</a>
-      <a href="/admin/student-details" class="btn secondary">Back to Student Details</a>
+      {% if public_view %}
+        <a href="{{ url_for('admission_application_pdf', admission_id=student.admission_id, token=view_token) }}" class="btn secondary">Download Admission PDF</a>
+        <a href="{{ url_for('admission_application_download_all', admission_id=student.admission_id, token=view_token) }}" class="btn secondary">Download PDF + Docs</a>
+      {% else %}
+        <a href="/admin/student/{{ student.admission_id }}/admission-pdf" class="btn secondary">Download Admission PDF</a>
+        <a href="/admin/download-all/{{ student.admission_id }}" class="btn secondary">Download Documents</a>
+        <a href="/admin/student-details" class="btn secondary">Back to Student Details</a>
+      {% endif %}
     </div>
 
     <div class="sheet">
@@ -556,7 +561,7 @@
       <div class="section">
         <h3>Student Information</h3>
         <div class="kv-grid">
-          <div class="kv"><div class="k">College Reg No</div><div class="v">{{ student.college_reg_no if student.college_reg_no else '-' }}</div></div>
+          <div class="kv"><div class="k">Student Register number</div><div class="v">{{ student.college_reg_no if student.college_reg_no else '-' }}</div></div>
           <div class="kv"><div class="k">Branch</div><div class="v">{{ student.branch }}</div></div>
           <div class="kv"><div class="k">Gender</div><div class="v">{{ personal.gender if personal else '-' }}</div></div>
           <div class="kv"><div class="k">DOB</div><div class="v">{{ personal.dob if personal else '-' }}</div></div>
