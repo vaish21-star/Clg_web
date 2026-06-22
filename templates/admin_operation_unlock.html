@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unlock Admin Operations | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h2>Unlock Admin Operations</h2>
+    <p class="subtitle">Enter the security passkey to allow protected admin actions for a short time.</p>
+    {% if message %}<p style="color:#c62828">{{ message }}</p>{% endif %}
+    <p class="help">Signed in as: <strong>{{ admin_identifier }}</strong></p>
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <div class="password-wrapper">
+        <input type="password" id="operation_pin" name="operation_pin" class="preserve-case" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" placeholder="Security passkey" required>
+        <button type="button" class="toggle-password" onclick="togglePassword('operation_pin', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+      <button type="submit">Unlock</button>
+    </form>
+    <a class="link" href="{{ url_for('admin_passkey_setup') }}">Manage Passkey</a>
+    <a class="link" href="{{ url_for('admin_login_history') }}">View Login History</a>
+    <a class="link" href="{{ url_for('admin_dashboard') }}">Back to Dashboard</a>
+  </div>
+  <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
+</body>
+</html>

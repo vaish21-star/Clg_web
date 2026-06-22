@@ -237,29 +237,6 @@
 
   <!-- ================= SCRIPTS ================= -->
   <script>
-    document.addEventListener("input", function (e) {
-      const isEditable = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA";
-      const isPasswordLike =
-        e.target.type === "password" ||
-        e.target.name === "password" ||
-        e.target.id === "password" ||
-        e.target.classList.contains("preserve-case");
-
-      if (isEditable && !isPasswordLike) {
-        e.target.value = e.target.value.toUpperCase();
-      }
-
-      if (e.target.matches('input[name="password"]')) {
-        e.stopImmediatePropagation();
-      }
-    }, true);
-
-    document.addEventListener("keydown", function (e) {
-      if (e.target.matches('input[name="password"]')) {
-        e.stopImmediatePropagation();
-      }
-    }, true);
-
     function toggleAcademicFields() {
       const exam = document.getElementById("qualifying_exam").value;
       const schoolBlock = document.getElementById("school-marks");

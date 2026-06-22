@@ -1,5 +1,14 @@
 Flask
+Flask-Login
+Flask-Mail
+Flask-Migrate
+Flask-SQLAlchemy
+Flask-WTF
+SQLAlchemy
+bcrypt
+email-validator
 mysql-connector-python
+openpyxl
+PyMySQL
 python-dotenv
 reportlab
-Pillow

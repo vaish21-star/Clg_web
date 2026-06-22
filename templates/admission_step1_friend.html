@@ -136,7 +136,12 @@
             <option>Mechanical Engineering</option>
           </select>
 
-          <input type="password" name="password" id="password" class="preserve-case" placeholder="Create Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="new-password">
+          <div class="password-wrapper">
+            <input type="password" name="password" id="password" class="preserve-case" placeholder="Create Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" autocomplete="new-password">
+            <button type="button" class="toggle-password" onclick="togglePassword('password', this)" aria-label="Show password" title="Show password">
+              <span aria-hidden="true">&#128065;</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -150,22 +155,6 @@
 
   <!-- ================= SCRIPTS ================= -->
   <script>
-    document.addEventListener("input", function (e) {
-      if (e.target.name === "student_name" || e.target.name === "religion") {
-        e.target.value = e.target.value.toUpperCase();
-      }
-
-      if (e.target.matches('input[name="password"]')) {
-        e.stopImmediatePropagation();
-      }
-    }, true);
-
-    document.addEventListener("keydown", function (e) {
-      if (e.target.matches('input[name="password"]')) {
-        e.stopImmediatePropagation();
-      }
-    }, true);
-
     function toggleAcademicFields() {
       const exam = document.getElementById("qualifying_exam").value;
       const schoolBlock = document.getElementById("school-marks");
@@ -217,6 +206,7 @@
     document.addEventListener("DOMContentLoaded", toggleAcademicFields);
 
   </script>
+  <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 </body>
 
 </html>

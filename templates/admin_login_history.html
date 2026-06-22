@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login History | SVP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,.08); text-align: left; vertical-align: top; }
+    th { white-space: nowrap; }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 18px; color: #555; }
+    .pager { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,.06); font-size: .9rem; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="card" style="max-width: 1200px">
+    <h2>Login History</h2>
+    <p class="subtitle">Every successful admin, staff, and student sign-in is recorded with timestamp and client details.</p>
+    <div class="meta">
+      <span class="pill">Total records: {{ total }}</span>
+      <span class="pill">Page {{ page }}</span>
+      <span class="pill">Showing {{ page_size }} per page</span>
+    </div>
+    <div class="pager">
+      <a class="link" href="{{ url_for('admin_dashboard') }}">Back to Dashboard</a>
+      <a class="link" href="{{ url_for('admin_passkey_setup') }}">Manage Passkey</a>
+      <a class="link" href="{{ url_for('admin_operation_unlock') }}">Unlock Operations</a>
+    </div>
+
+    <div class="table-wrap" style="margin-top: 18px">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Identifier</th>
+            <th>Email</th>
+            <th>IP</th>
+            <th>User Agent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="mono">{{ row.created_at }}</td>
+            <td><span class="pill">{{ row.user_type }}</span></td>
+            <td>{{ row.display_name or "-" }}</td>
+            <td class="mono">{{ row.identifier }}</td>
+            <td>{{ row.email or "-" }}</td>
+            <td class="mono">{{ row.ip_address or "-" }}</td>
+            <td class="mono">{{ row.user_agent or "-" }}</td>
+          </tr>
+          {% endfor %}
+          {% if not rows %}
+          <tr>
+            <td colspan="7">No login history recorded yet.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      {% if has_prev %}
+        <a class="link" href="{{ url_for('admin_login_history', page=page-1, limit=page_size) }}">Previous</a>
+      {% endif %}
+      {% if has_next %}
+        <a class="link" href="{{ url_for('admin_login_history', page=page+1, limit=page_size) }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

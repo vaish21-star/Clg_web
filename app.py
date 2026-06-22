@@ -9,10 +9,15 @@ import smtplib
 import zipfile
 import re
 import secrets
+from functools import lru_cache
 from email.message import EmailMessage
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+try:
+    import bcrypt
+except Exception:
+    bcrypt = None
 try:
     from pypdf import PdfReader
 except Exception:
@@ -49,6 +54,12 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev_secret_key")
 
 AUTH_RATE_LIMIT_WINDOW_SECONDS = 300
 AUTH_RATE_LIMIT_MAX_ATTEMPTS = 5
+ADMIN_OPERATION_UNLOCK_MINUTES = 15
+ADMIN_OTP_TTL_MINUTES = 10
+ADMIN_OPERATION_UNLOCK_SESSION_KEY = "admin_operation_unlock_until"
+ADMIN_PASSKEY_CHALLENGE_SESSION_KEY = "admin_passkey_challenge"
+LOGIN_AUDIT_SIGNATURE_SESSION_KEY = "_login_audit_signature"
+ADMIN_FORGOT_PASSWORD_CHALLENGE_KEY = "admin_forgot_password_challenge"
 _AUTH_FAILED_ATTEMPTS = {}
 
 
@@ -442,6 +453,663 @@ def can_set_allotted_category(scope):
     return "management" in dept or "management" in desig
 
 
+def _get_table_columns(table_name):
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(f"SHOW COLUMNS FROM `{table_name}`")
+        return [row[0] for row in cur.fetchall()]
+    finally:
+        cur.close()
+        db.close()
+
+
+def _first_non_empty(record, candidate_keys):
+    if not record:
+        return None
+    for key in candidate_keys:
+        value = record.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _find_record_by_any_identifier(table_name, identifier, candidate_columns):
+    identifier = (identifier or "").strip()
+    if not identifier:
+        return None
+
+    columns = set(_get_table_columns(table_name))
+    usable_columns = [column for column in candidate_columns if column in columns]
+    if not usable_columns:
+        return None
+
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    try:
+        conditions = [f"LOWER(`{column}`)=LOWER(%s)" for column in usable_columns]
+        params = tuple(identifier for _ in usable_columns)
+        cur.execute(
+            f"SELECT * FROM `{table_name}` WHERE {' OR '.join(conditions)} LIMIT 1",
+            params,
+        )
+        return cur.fetchone()
+    finally:
+        cur.close()
+        db.close()
+
+
+def _normalize_session_identity_value(value):
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _current_authenticated_identity():
+    admin_identifier = _normalize_session_identity_value(session.get("admin"))
+    staff_identifier = _normalize_session_identity_value(session.get("staff_id"))
+
+    if staff_identifier:
+        staff_row = _find_record_by_any_identifier("staff_accounts", staff_identifier, ["id"])
+        display_name = _first_non_empty(staff_row, ["employee_name", "staff_name", "name", "full_name"])
+        department = _first_non_empty(staff_row, ["department"])
+        designation = _first_non_empty(staff_row, ["designation"])
+        return {
+            "user_type": "staff",
+            "identifier": staff_identifier,
+            "display_name": display_name or f"Staff #{staff_identifier}",
+            "email": _first_non_empty(staff_row, ["email", "gmail"]),
+            "department": department,
+            "designation": designation,
+        }
+
+    if admin_identifier:
+        admin_row = _find_record_by_any_identifier(
+            "admins",
+            admin_identifier,
+            ["email", "username", "admin_email", "admin_username", "gmail"],
+        )
+        display_name = _first_non_empty(admin_row, ["username", "name", "full_name", "email"])
+        return {
+            "user_type": "admin",
+            "identifier": admin_identifier,
+            "display_name": display_name or admin_identifier,
+            "email": _first_non_empty(admin_row, ["email", "gmail"]),
+        }
+
+    student_identifier = ""
+    for candidate in (
+        "student_id",
+        "student",
+        "admission_id",
+        "reg_no",
+        "registration_no",
+        "roll_no",
+        "college_reg_no",
+    ):
+        student_identifier = _normalize_session_identity_value(session.get(candidate))
+        if student_identifier:
+            break
+
+    if student_identifier:
+        student_row = _find_record_by_any_identifier(
+            "students",
+            student_identifier,
+            ["admission_id", "reg_no", "registration_no", "student_id", "college_reg_no", "roll_no"],
+        )
+        display_name = _first_non_empty(
+            student_row,
+            ["student_name", "name", "full_name", "applicant_name", "candidate_name"],
+        )
+        return {
+            "user_type": "student",
+            "identifier": student_identifier,
+            "display_name": display_name or f"Student #{student_identifier}",
+            "email": _first_non_empty(student_row, ["email", "gmail"]),
+        }
+
+    return None
+
+
+def _current_auth_signature():
+    staff_identifier = _normalize_session_identity_value(session.get("staff_id"))
+    if staff_identifier:
+        return f"staff:{staff_identifier}"
+
+    admin_identifier = _normalize_session_identity_value(session.get("admin"))
+    if admin_identifier:
+        return f"admin:{admin_identifier}"
+
+    for candidate in (
+        "student_id",
+        "student",
+        "admission_id",
+        "reg_no",
+        "registration_no",
+        "roll_no",
+        "college_reg_no",
+    ):
+        student_identifier = _normalize_session_identity_value(session.get(candidate))
+        if student_identifier:
+            return f"student:{student_identifier}"
+
+    return None
+
+
+def ensure_login_history_table():
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS login_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_type VARCHAR(20) NOT NULL,
+                identifier VARCHAR(255) NOT NULL,
+                display_name VARCHAR(255) NULL,
+                email VARCHAR(255) NULL,
+                ip_address VARCHAR(45) NULL,
+                user_agent VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute("SHOW INDEX FROM login_history WHERE Key_name='idx_login_history_created_at'")
+        if not cur.fetchone():
+            cur.execute("CREATE INDEX idx_login_history_created_at ON login_history (created_at)")
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
+def record_login_history(identity):
+    if not identity:
+        return
+
+    ensure_login_history_table()
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO login_history (user_type, identifier, display_name, email, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                identity.get("user_type"),
+                identity.get("identifier"),
+                identity.get("display_name"),
+                identity.get("email"),
+                (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip(),
+                (request.headers.get("User-Agent") or "")[:255],
+            ),
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        cur.close()
+        db.close()
+
+
+def _parse_utc_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1]
+    try:
+        return datetime.fromisoformat(text)
+    except Exception:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+            try:
+                return datetime.strptime(text, fmt)
+            except Exception:
+                continue
+    return None
+
+
+def _safe_internal_next_url(value, fallback):
+    value = (value or "").strip()
+    if value.startswith("/") and not value.startswith("//"):
+        return value
+    return fallback
+
+
+def _admin_operation_unlock_expires_at():
+    return _parse_utc_datetime(session.get(ADMIN_OPERATION_UNLOCK_SESSION_KEY))
+
+
+def _admin_operation_is_unlocked():
+    expires_at = _admin_operation_unlock_expires_at()
+    return bool(expires_at and expires_at > datetime.utcnow())
+
+
+def _mark_admin_operation_unlocked():
+    session[ADMIN_OPERATION_UNLOCK_SESSION_KEY] = (datetime.utcnow() + timedelta(minutes=ADMIN_OPERATION_UNLOCK_MINUTES)).isoformat()
+    session.modified = True
+
+
+def _clear_admin_operation_unlock():
+    session.pop(ADMIN_OPERATION_UNLOCK_SESSION_KEY, None)
+    session.modified = True
+
+
+def _get_admin_record_by_login_identifier(identifier):
+    identifier = (identifier or "").strip()
+    if not identifier:
+        return None
+    return _find_record_by_any_identifier(
+        "admins",
+        identifier,
+        ["email", "username", "admin_email", "admin_username", "gmail"],
+    )
+
+
+def _get_current_admin_record():
+    admin_id = _normalize_session_identity_value(session.get("admin_id"))
+    if admin_id:
+        admin_record = _find_record_by_any_identifier("admins", admin_id, ["id"])
+        if admin_record:
+            return admin_record
+
+    admin_identifier = _normalize_session_identity_value(session.get("admin"))
+    if not admin_identifier:
+        return None
+    admin_record = _get_admin_record_by_login_identifier(admin_identifier)
+    if admin_record and not session.get("admin_id") and admin_record.get("id") is not None:
+        session["admin_id"] = admin_record.get("id")
+        session.modified = True
+    return admin_record
+
+
+def _get_admin_password_hash(admin_record):
+    if not admin_record:
+        return None
+    for key in (
+        "password_hash",
+        "password",
+        "admin_password",
+        "hashed_password",
+        "passwd",
+        "secret",
+    ):
+        value = admin_record.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _verify_secret(candidate_value, stored_value):
+    if not candidate_value or not stored_value:
+        return False
+    stored_value = str(stored_value)
+    try:
+        if bcrypt is not None and stored_value.startswith("$2"):
+            return bcrypt.checkpw(candidate_value.encode("utf-8"), stored_value.encode("utf-8"))
+    except Exception:
+        pass
+    try:
+        return check_password_hash(stored_value, candidate_value)
+    except Exception:
+        legacy_sha256 = hashlib.sha256((candidate_value or "").encode()).hexdigest()
+        return stored_value == candidate_value or stored_value == legacy_sha256
+
+
+def _send_admin_email_otp(recipient_email, otp_code, purpose):
+    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("MAIL_USERNAME") or os.environ.get("EMAIL_USER") or os.environ.get("SMTP_USERNAME")
+    smtp_password = os.environ.get("MAIL_PASSWORD") or os.environ.get("EMAIL_PASSWORD") or os.environ.get("SMTP_PASSWORD")
+    sender_email = os.environ.get("MAIL_FROM") or os.environ.get("EMAIL_FROM") or smtp_user
+
+    if not smtp_user or not smtp_password or not sender_email:
+        raise RuntimeError("Mail credentials are not configured. Set MAIL_USERNAME and MAIL_PASSWORD.")
+
+    message = EmailMessage()
+    message["Subject"] = f"SVP Admin Security OTP - {purpose}"
+    message["From"] = sender_email
+    message["To"] = recipient_email
+    message.set_content(
+        f"Your SVP admin security OTP is {otp_code}. It expires in {ADMIN_OTP_TTL_MINUTES} minutes."
+    )
+
+    with smtplib.SMTP(smtp_host, smtp_port) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(smtp_user, smtp_password)
+        smtp.send_message(message)
+
+
+def _store_passkey_otp_challenge(admin_identifier, email, otp_code):
+    session[ADMIN_PASSKEY_CHALLENGE_SESSION_KEY] = {
+        "admin_identifier": admin_identifier,
+        "email": email,
+        "otp_hash": generate_password_hash(otp_code),
+        "expires_at": (datetime.utcnow() + timedelta(minutes=ADMIN_OTP_TTL_MINUTES)).isoformat(),
+        "attempts": 0,
+    }
+    session.modified = True
+
+
+def _load_passkey_otp_challenge():
+    challenge = session.get(ADMIN_PASSKEY_CHALLENGE_SESSION_KEY)
+    if not challenge:
+        return None
+    expires_at = _parse_utc_datetime(challenge.get("expires_at"))
+    if not expires_at or expires_at <= datetime.utcnow():
+        session.pop(ADMIN_PASSKEY_CHALLENGE_SESSION_KEY, None)
+        session.modified = True
+        return None
+    return challenge
+
+
+def _clear_passkey_otp_challenge():
+    session.pop(ADMIN_PASSKEY_CHALLENGE_SESSION_KEY, None)
+    session.modified = True
+
+
+def _hash_admin_pin(pin_value):
+    if bcrypt is not None:
+        return bcrypt.hashpw(pin_value.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    return generate_password_hash(pin_value)
+
+
+def verify_admin_operation_pin(admin_identifier, candidate_value):
+    admin_record = _get_current_admin_record() or _get_admin_record_by_login_identifier(admin_identifier)
+    if not admin_record:
+        return False, "Admin account not found."
+
+    stored_hash = (admin_record.get("security_pin_hash") or "").strip()
+    if not stored_hash:
+        return False, "Set a security passkey first."
+
+    candidate_value = candidate_value or ""
+    if len(candidate_value.strip()) < 6:
+        return False, "Enter your security passkey."
+
+    if _verify_secret(candidate_value, stored_hash):
+        return True, "Security passkey verified."
+    return False, "Invalid security passkey."
+
+
+def _update_admin_passkey(admin_record, pin_value):
+    pin_hash = _hash_admin_pin(pin_value)
+    lookup_column = _first_existing_column("admins", ["id", "admin_id", "username", "email"])
+    if not lookup_column:
+        raise RuntimeError("No usable admin lookup column was found.")
+    lookup_value = admin_record.get(lookup_column)
+    if lookup_value in (None, "") and lookup_column == "username":
+        lookup_value = admin_record.get("username") or admin_record.get("email")
+    if lookup_value in (None, ""):
+        raise RuntimeError("Unable to identify the current admin account.")
+
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            f"""
+            UPDATE admins
+            SET security_pin_hash=%s,
+                security_pin_created_at=COALESCE(security_pin_created_at, %s),
+                security_pin_changed_at=%s,
+                security_pin_failed_attempts=0,
+                security_pin_locked_until=NULL
+            WHERE `{lookup_column}`=%s
+            """,
+            (pin_hash, datetime.utcnow(), datetime.utcnow(), lookup_value),
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cur.close()
+        db.close()
+
+
+def _audit_session_login_if_needed(response):
+    try:
+        current_signature = _current_auth_signature()
+        if current_signature and session.get(LOGIN_AUDIT_SIGNATURE_SESSION_KEY) != current_signature:
+            identity = _current_authenticated_identity()
+            if identity:
+                record_login_history(identity)
+                session[LOGIN_AUDIT_SIGNATURE_SESSION_KEY] = current_signature
+                session.modified = True
+        elif session.get(LOGIN_AUDIT_SIGNATURE_SESSION_KEY):
+            session.pop(LOGIN_AUDIT_SIGNATURE_SESSION_KEY, None)
+            session.modified = True
+    except Exception:
+        pass
+    return response
+
+
+@app.before_request
+def _enforce_admin_operation_unlock():
+    if request.endpoint == "static" or request.path.startswith("/static/"):
+        return None
+    if not request.path.startswith("/admin"):
+        return None
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+
+    scope = get_access_scope()
+    if not scope.get("allowed"):
+        return None
+    if scope.get("is_staff"):
+        return None
+
+    exempt_paths = {
+        "/admin/security/passkey",
+        "/admin/security/operation-unlock",
+        "/admin/security/login-history",
+    }
+    if request.path in exempt_paths:
+        return None
+
+    if _admin_operation_is_unlocked():
+        return None
+
+    if (request.form.get("operation_pin") or "").strip():
+        pin_ok, pin_message = verify_admin_operation_pin((session.get("admin") or "").strip(), request.form.get("operation_pin"))
+        if pin_ok:
+            _mark_admin_operation_unlocked()
+            return None
+        return redirect(url_for("admin_operation_unlock", next=request.path, msg=pin_message))
+
+    if not _admin_has_passkey():
+        return redirect(url_for("admin_passkey_setup", msg="Set your security passkey before performing admin operations."))
+
+    return redirect(url_for("admin_operation_unlock", next=request.path, msg="Enter your security passkey to continue."))
+
+
+@app.before_request
+def _handle_admin_forgot_password_override():
+    if request.path != "/forgot-password/admin":
+        return None
+
+    message = ""
+    challenge = _load_admin_forgot_password_challenge()
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip().lower()
+        identifier = (request.form.get("admin_identifier") or request.form.get("email") or request.form.get("username") or "").strip()
+        password_col = _get_admin_password_column()
+        admin_record = _get_admin_record_by_reset_identifier(identifier)
+
+        if action == "send_otp":
+            if not identifier:
+                message = "Enter your admin Gmail or username."
+            elif not admin_record:
+                message = "Admin account not found."
+            else:
+                admin_email = _first_non_empty(admin_record, ["email", "gmail"])
+                if not admin_email:
+                    message = "This admin account does not have an email address."
+                else:
+                    otp_code = f"{secrets.randbelow(1000000):06d}"
+                    try:
+                        _send_admin_email_otp(admin_email, otp_code, "admin password reset")
+                    except Exception as exc:
+                        message = f"Unable to send OTP: {exc}"
+                    else:
+                        _store_admin_forgot_password_challenge(identifier, admin_email, otp_code)
+                        challenge = _load_admin_forgot_password_challenge()
+                        message = "OTP sent to the admin email."
+
+        elif action == "reset_password":
+            otp = (request.form.get("otp") or "").strip()
+            new_password = request.form.get("new_password") or ""
+            confirm_password = request.form.get("confirm_password") or ""
+            if not admin_record:
+                message = "Admin account not found."
+            elif not password_col:
+                message = "No password column was found in the admins table."
+            elif not challenge:
+                message = "Request a fresh OTP first."
+            elif challenge.get("admin_identifier") != identifier:
+                message = "The OTP challenge does not match this admin account."
+            elif not _verify_secret(otp, challenge.get("otp_hash")):
+                challenge["attempts"] = int(challenge.get("attempts") or 0) + 1
+                session[ADMIN_FORGOT_PASSWORD_CHALLENGE_KEY] = challenge
+                session.modified = True
+                message = "Invalid OTP."
+            elif len(new_password) < 8:
+                message = "New password must be at least 8 characters."
+            elif new_password != confirm_password:
+                message = "Passwords do not match."
+            else:
+                db = get_db()
+                cur = db.cursor()
+                try:
+                    stored_value = generate_password_hash(new_password)
+                    key_column = _first_existing_column("admins", ["email", "username", "admin_email", "admin_username", "gmail", "id", "admin_id"])
+                    if not key_column:
+                        raise RuntimeError("No usable admin lookup column was found.")
+                    lookup_value = admin_record.get(key_column)
+                    cur.execute(
+                        f"UPDATE admins SET `{password_col}`=%s WHERE `{key_column}`=%s",
+                        (stored_value, lookup_value),
+                    )
+                    db.commit()
+                    _clear_admin_forgot_password_challenge()
+                    message = "Admin password updated successfully. You can now log in with the new password."
+                except Exception as exc:
+                    db.rollback()
+                    message = f"Unable to update password: {exc}"
+                finally:
+                    cur.close()
+                    db.close()
+
+    return _render_admin_forgot_password_page(message=message, stage="reset" if challenge else "request")
+
+
+@app.after_request
+def _log_login_history(response):
+    return _audit_session_login_if_needed(response)
+
+
+def _admin_has_passkey():
+    admin_identifier = (session.get("admin") or "").strip()
+    if not admin_identifier:
+        return False
+    admin_record = _get_admin_record_by_login_identifier(admin_identifier)
+    return bool(admin_record and (admin_record.get("security_pin_hash") or "").strip())
+
+
+def _get_cached_table_columns(table_name):
+    return tuple(_get_table_columns(table_name))
+
+
+def _first_existing_column(table_name, candidates):
+    columns = set(_get_cached_table_columns(table_name))
+    for candidate in candidates:
+        if candidate in columns:
+            return candidate
+    return None
+
+
+def _get_admin_record_by_reset_identifier(identifier):
+    return _find_record_by_any_identifier(
+        "admins",
+        identifier,
+        ["email", "username", "admin_email", "admin_username", "gmail"],
+    )
+
+
+def _get_admin_password_column():
+    return _first_existing_column(
+        "admins",
+        ["password_hash", "password", "admin_password", "hashed_password", "passwd", "secret"],
+    )
+
+
+def _store_admin_forgot_password_challenge(admin_identifier, email, otp_code):
+    session[ADMIN_FORGOT_PASSWORD_CHALLENGE_KEY] = {
+        "admin_identifier": admin_identifier,
+        "email": email,
+        "otp_hash": generate_password_hash(otp_code),
+        "expires_at": (datetime.utcnow() + timedelta(minutes=ADMIN_OTP_TTL_MINUTES)).isoformat(),
+        "attempts": 0,
+    }
+    session.modified = True
+
+
+def _load_admin_forgot_password_challenge():
+    challenge = session.get(ADMIN_FORGOT_PASSWORD_CHALLENGE_KEY)
+    if not challenge:
+        return None
+    expires_at = _parse_utc_datetime(challenge.get("expires_at"))
+    if not expires_at or expires_at <= datetime.utcnow():
+        session.pop(ADMIN_FORGOT_PASSWORD_CHALLENGE_KEY, None)
+        session.modified = True
+        return None
+    return challenge
+
+
+def _clear_admin_forgot_password_challenge():
+    session.pop(ADMIN_FORGOT_PASSWORD_CHALLENGE_KEY, None)
+    session.modified = True
+
+
+def _update_admin_password(admin_record, new_password):
+    password_column = _get_admin_password_column()
+    if not password_column:
+        raise RuntimeError("No password column was found on the admins table.")
+
+    stored_value = _hash_admin_pin(new_password) if password_column.endswith("_hash") else generate_password_hash(new_password)
+
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            f"UPDATE admins SET `{password_column}`=%s WHERE { _first_existing_column('admins', ['id', 'admin_id', 'username', 'email']) or 'email' }=%s",
+            (stored_value, admin_record.get(_first_existing_column("admins", ["id", "admin_id", "username", "email"]))),
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cur.close()
+        db.close()
+
+
+def _render_admin_forgot_password_page(message="", stage="request"):
+    return render_template(
+        "forgot_password_admin_fix.html",
+        message=message,
+        stage=stage,
+    )
+
+
 def ensure_students_admission_year_column():
     db = get_db()
     cur = db.cursor()
@@ -481,6 +1149,26 @@ def ensure_admin_auth_support():
         cur.execute("SHOW COLUMNS FROM admins LIKE 'email'")
         if not cur.fetchone():
             cur.execute("ALTER TABLE admins ADD COLUMN email VARCHAR(255) NULL")
+            db.commit()
+        cur.execute("SHOW COLUMNS FROM admins LIKE 'security_pin_hash'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE admins ADD COLUMN security_pin_hash VARCHAR(255) NULL")
+            db.commit()
+        cur.execute("SHOW COLUMNS FROM admins LIKE 'security_pin_created_at'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE admins ADD COLUMN security_pin_created_at DATETIME NULL")
+            db.commit()
+        cur.execute("SHOW COLUMNS FROM admins LIKE 'security_pin_changed_at'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE admins ADD COLUMN security_pin_changed_at DATETIME NULL")
+            db.commit()
+        cur.execute("SHOW COLUMNS FROM admins LIKE 'security_pin_failed_attempts'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE admins ADD COLUMN security_pin_failed_attempts INT NOT NULL DEFAULT 0")
+            db.commit()
+        cur.execute("SHOW COLUMNS FROM admins LIKE 'security_pin_locked_until'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE admins ADD COLUMN security_pin_locked_until DATETIME NULL")
             db.commit()
     except Exception:
         db.rollback()
@@ -2262,6 +2950,7 @@ def login_staff_admin():
                 clear_auth_failures("staff_admin_login", identity)
                 session.clear()
                 session["admin"] = admin["username"]
+                session["admin_id"] = admin.get("id")
                 cur.close()
                 db.close()
                 return redirect("/admin")
@@ -5064,20 +5753,20 @@ def admission():
     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 """, (
     admission_id,
-    request.form["student_mobile"].strip().upper(),
+    request.form["student_mobile"].strip(),
     request.form["student_email"].strip(),   # ← comma added here
-    request.form["indian_nationality"].strip().upper(),
-    request.form["religion"].strip().upper(),
-    request.form["disability"].strip().upper(),
-    request.form["aadhaar_number"].strip().upper(),
-    request.form["caste_rd_number"].strip().upper(),
+    request.form["indian_nationality"].strip(),
+    request.form["religion"].strip(),
+    request.form["disability"].strip(),
+    request.form["aadhaar_number"].strip(),
+    request.form["caste_rd_number"].strip(),
     caste_name,
-    request.form["income_rd_number"].strip().upper(),
+    request.form["income_rd_number"].strip(),
     income_name,
     request.form["annual_income"],
-    request.form["mother_name"].strip().upper(),
+    request.form["mother_name"].strip(),
     request.form["mother_mobile"],
-    request.form["father_name"].strip().upper(),
+    request.form["father_name"].strip(),
     request.form["father_mobile"],
     request.form["residential_address"],
     request.form["permanent_address"]
@@ -5136,7 +5825,7 @@ def admission_step1():
         admission_year = request.form.get("admission_year", "").strip() or current_academic_year()
         if not re.match(r"^\d{4}-\d{2}$", admission_year):
             return "Admission year must be in YYYY-YY format (example: 2026-27)", 400
-        register_number = request.form.get("register_number", "").strip().upper()
+        register_number = request.form.get("register_number", "").strip()
         if not register_number:
             return render_template("admission_step1.html", admission_year=admission_year, error="Register number is required.")
         ensure_register_number_constraints()
@@ -5234,14 +5923,14 @@ def admission_step2():
 
     if request.method == "POST":
         admission.update({
-            "father_name": request.form.get("father_name").upper(),
+            "father_name": request.form.get("father_name"),
             "father_mobile": request.form.get("father_mobile"),
-            "mother_name": request.form.get("mother_name").upper(),
+            "mother_name": request.form.get("mother_name"),
             "mother_mobile": request.form.get("mother_mobile"),
             "annual_income": request.form.get("annual_income"),
-            "residential_address": request.form.get("residential_address").upper(),
-            "permanent_address": request.form.get("permanent_address").upper(),
-            "postal_address": request.form.get("postal_address").upper() if request.form.get("postal_address") else None,
+            "residential_address": request.form.get("residential_address"),
+            "permanent_address": request.form.get("permanent_address"),
+            "postal_address": request.form.get("postal_address") if request.form.get("postal_address") else None,
             "pin_code": request.form.get("pin_code"),
         })
 
@@ -5314,9 +6003,9 @@ def admission_step3():
             session.modified = True
 
         # ===== READ STEP-3 FORM DATA =====
-        aadhaar_number = request.form.get("aadhaar_number", "").strip().upper()
-        caste_rd_number = request.form.get("caste_rd_number", "").strip().upper()
-        income_rd_number = request.form.get("income_rd_number", "").strip().upper()
+        aadhaar_number = request.form.get("aadhaar_number", "").strip()
+        caste_rd_number = request.form.get("caste_rd_number", "").strip()
+        income_rd_number = request.form.get("income_rd_number", "").strip()
 
         # ===== AADHAAR VALIDATION =====
         if not aadhaar_number.isdigit() or len(aadhaar_number) != 12:
@@ -5346,7 +6035,7 @@ def admission_step3():
         if admission["qualifying_exam"] not in ["SSLC","CBSE","ICSE", "PUC", "ITI"]:
             return "❌ Invalid Qualifying Exam"
 
-        register_number = (admission.get("register_number") or "").strip().upper()
+        register_number = (admission.get("register_number") or "").strip()
         if not register_number:
             return render_template("admission_step3.html", error="Register number is required.")
 
@@ -6041,7 +6730,7 @@ def admin_monthly_internal_marks():
             return redirect(url_for("admin_monthly_internal_marks", msg="Session expired. Refresh and try again."))
         action = (request.form.get("action") or "save_assessment").strip().lower()
         admission_id = (request.form.get("admission_id") or "").strip().upper()
-        register_number = (request.form.get("register_number") or "").strip().upper()
+        register_number = (request.form.get("register_number") or "").strip()
         branch = (request.form.get("branch") or "").strip()
         semester_no = parse_int_prefix(request.form.get("semester_no")) or 1
         series_name = (request.form.get("series") or "").strip().upper()
@@ -6353,7 +7042,7 @@ def add_student():
     can_set_alloted = can_set_allotted_category(scope)
 
     if request.method == "POST":
-        name = request.form.get("student_name", "").strip().upper()
+        name = request.form.get("student_name", "").strip()
         branch = request.form.get("branch", "").strip()
         admission_year_text = request.form.get("admission_year", "").strip() or current_academic_year()
         if scope["is_staff"]:
@@ -6379,23 +7068,23 @@ def add_student():
         # Online step-1/2 equivalent fields
         dob = request.form.get("dob", "").strip()
         gender = request.form.get("gender", "").strip()
-        indian_nationality = request.form.get("indian_nationality", "").strip().upper()
-        religion = request.form.get("religion", "").strip().upper()
-        caste_category = request.form.get("caste_category", "").strip().upper()
-        alloted_category = request.form.get("alloted_category", "").strip().upper()
+        indian_nationality = request.form.get("indian_nationality", "").strip()
+        religion = request.form.get("religion", "").strip()
+        caste_category = request.form.get("caste_category", "").strip()
+        alloted_category = request.form.get("alloted_category", "").strip()
         if not can_set_alloted:
             alloted_category = "PENDING"
-        admission_quota = request.form.get("admission_quota", "").strip().upper()
-        register_number = request.form.get("register_number", "").strip().upper()
+        admission_quota = request.form.get("admission_quota", "").strip()
+        register_number = request.form.get("register_number", "").strip()
         year_of_passing = request.form.get("year_of_passing", "").strip()
-        qualifying_exam = request.form.get("qualifying_exam", "").strip().upper()
+        qualifying_exam = request.form.get("qualifying_exam", "").strip()
 
-        father_name = request.form.get("father_name", "").strip().upper()
+        father_name = request.form.get("father_name", "").strip()
         father_mobile = request.form.get("father_mobile", "").strip()
-        mother_name = request.form.get("mother_name", "").strip().upper()
+        mother_name = request.form.get("mother_name", "").strip()
         mother_mobile = request.form.get("mother_mobile", "").strip()
-        residential_address = request.form.get("residential_address", "").strip().upper()
-        permanent_address = request.form.get("permanent_address", "").strip().upper()
+        residential_address = request.form.get("residential_address", "").strip()
+        permanent_address = request.form.get("permanent_address", "").strip()
 
         # Education details table mapping
         def first_non_empty(*keys):
@@ -6422,9 +7111,9 @@ def add_student():
         maths_max_marks = to_int_or_none(first_non_empty("maths_max_marks"))
         maths_marks_obtained = to_int_or_none(first_non_empty("maths_marks", "maths_marks_obtained"))
 
-        aadhaar_number = request.form.get("aadhaar_number", "").strip().upper()
-        caste_rd_number = request.form.get("caste_rd_number", "").strip().upper()
-        income_rd_number = request.form.get("income_rd_number", "").strip().upper()
+        aadhaar_number = request.form.get("aadhaar_number", "").strip()
+        caste_rd_number = request.form.get("caste_rd_number", "").strip()
+        income_rd_number = request.form.get("income_rd_number", "").strip()
 
         if qualifying_exam not in ["SSLC", "PUC", "ITI", "CBSE", "ICSE"]:
             return "Invalid qualifying exam", 400
@@ -7857,9 +8546,9 @@ def upload_documents():
     caste = save_file(request.files.get("caste_file"), "caste", admission_id)
     income = save_file(request.files.get("income_file"), "income", admission_id)
     marks = save_file(request.files.get("marks_card_file"), "marks", admission_id)
-    aadhaar_number = (request.form.get("aadhaar_number") or "").strip().upper()
-    caste_rd_number = (request.form.get("caste_rd_number") or "").strip().upper()
-    income_rd_number = (request.form.get("income_rd_number") or "").strip().upper()
+    aadhaar_number = (request.form.get("aadhaar_number") or "").strip()
+    caste_rd_number = (request.form.get("caste_rd_number") or "").strip()
+    income_rd_number = (request.form.get("income_rd_number") or "").strip()
 
     # 3️⃣ student_documents table
     conn = get_db()
@@ -8099,5 +8788,184 @@ def student_reupload():
 # =========================
 # RUN SERVER
 # =========================
+if __name__ == "__main__":
+    pass
+@app.route("/admin/security/passkey", methods=["GET", "POST"])
+def admin_passkey_setup():
+    ensure_admin_auth_support()
+    scope = get_access_scope()
+    if not scope["allowed"]:
+        return redirect("/")
+    if scope["is_staff"]:
+        return "Forbidden: Only admin can manage the security passkey.", 403
+
+    message = request.args.get("msg", "")
+    challenge = _load_passkey_otp_challenge()
+    admin_identifier = (session.get("admin") or "").strip()
+    admin_record = _get_current_admin_record() or _get_admin_record_by_login_identifier(admin_identifier)
+    if not admin_record:
+        return redirect("/login/staff")
+
+    existing_pin = bool((admin_record.get("security_pin_hash") or "").strip())
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip().lower()
+        form_identifier = (request.form.get("admin_identifier") or "").strip()
+        form_password = request.form.get("password") or ""
+        form_otp = (request.form.get("otp") or "").strip()
+        new_pin = request.form.get("new_pin") or ""
+        confirm_pin = request.form.get("confirm_pin") or ""
+
+        if action == "send_otp":
+            admin_email = _first_non_empty(admin_record, ["email", "gmail"])
+            admin_login_name = (admin_record.get("username") or "").strip()
+            if not form_identifier:
+                message = "Enter your admin Gmail or username."
+            elif form_identifier.lower() not in {
+                admin_identifier.lower(),
+                admin_login_name.lower(),
+                (admin_email or "").lower(),
+            }:
+                message = "Use the currently signed-in admin account to request the OTP."
+            elif not verify_password(admin_record.get("password_hash", ""), form_password):
+                message = "Invalid admin password."
+            elif not admin_email:
+                message = "This admin account does not have a registered email address."
+            else:
+                otp_code = f"{secrets.randbelow(1000000):06d}"
+                try:
+                    _send_admin_email_otp(admin_email, otp_code, "security passkey setup")
+                except Exception as exc:
+                    message = f"Unable to send OTP: {exc}"
+                else:
+                    _store_passkey_otp_challenge(admin_identifier, admin_email, otp_code)
+                    challenge = _load_passkey_otp_challenge()
+                    message = "OTP sent to your admin email."
+
+        elif action == "save_passkey":
+            if not challenge:
+                message = "Request a fresh OTP first."
+            elif challenge.get("admin_identifier") != admin_identifier:
+                message = "The OTP challenge does not match the current admin session."
+            elif not _verify_secret(form_otp, challenge.get("otp_hash")):
+                challenge["attempts"] = int(challenge.get("attempts") or 0) + 1
+                session[ADMIN_PASSKEY_CHALLENGE_SESSION_KEY] = challenge
+                session.modified = True
+                if challenge["attempts"] >= 5:
+                    _clear_passkey_otp_challenge()
+                    message = "Too many OTP attempts. Request a new code."
+                else:
+                    message = "Invalid OTP."
+            elif len(new_pin.strip()) < 6:
+                message = "The new passkey must be at least 6 characters long."
+            elif new_pin != confirm_pin:
+                message = "Passkey confirmation does not match."
+            else:
+                _update_admin_passkey(admin_record, new_pin)
+                _clear_passkey_otp_challenge()
+                _mark_admin_operation_unlocked()
+                message = "Security passkey saved successfully."
+                existing_pin = True
+
+    return render_template(
+        "admin_passkey.html",
+        scope=scope,
+        message=message,
+        challenge_active=bool(challenge),
+        has_passkey=existing_pin,
+        admin_identifier=admin_identifier,
+    )
+
+
+@app.route("/admin/security/operation-unlock", methods=["GET", "POST"])
+def admin_operation_unlock():
+    scope = get_access_scope()
+    if not scope["allowed"]:
+        return redirect("/")
+    if scope["is_staff"]:
+        return "Forbidden: Only admin can unlock administrative operations.", 403
+
+    admin_identifier = (session.get("admin") or "").strip()
+    if not admin_identifier:
+        return redirect("/login/staff")
+    admin_record = _get_current_admin_record() or _get_admin_record_by_login_identifier(admin_identifier)
+    if not admin_record:
+        return redirect("/login/staff")
+    if not _admin_has_passkey():
+        return redirect(url_for("admin_passkey_setup", msg="Set your security passkey first."))
+
+    message = request.args.get("msg", "")
+    next_url = _safe_internal_next_url(request.args.get("next") or request.form.get("next"), url_for("admin_dashboard"))
+
+    if request.method == "POST":
+        pin = (request.form.get("operation_pin") or "").strip()
+        if len(pin) < 6:
+            message = "Enter your security passkey."
+        else:
+            pin_ok, pin_message = verify_admin_operation_pin(admin_identifier, pin)
+            if pin_ok:
+                _mark_admin_operation_unlocked()
+                return redirect(next_url)
+            message = pin_message
+
+    return render_template(
+        "admin_operation_unlock.html",
+        scope=scope,
+        message=message,
+        next_url=next_url,
+        admin_identifier=admin_identifier,
+    )
+
+
+@app.route("/admin/security/login-history")
+def admin_login_history():
+    scope = get_access_scope()
+    if not scope["allowed"]:
+        return redirect("/")
+    if scope["is_staff"]:
+        return "Forbidden: Only admin can view login history.", 403
+
+    ensure_login_history_table()
+    try:
+        page = max(int(request.args.get("page", 1) or 1), 1)
+    except Exception:
+        page = 1
+    try:
+        page_size = min(max(int(request.args.get("limit", 200) or 200), 25), 500)
+    except Exception:
+        page_size = 200
+    offset = (page - 1) * page_size
+
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    try:
+        cur.execute("SELECT COUNT(*) AS total FROM login_history")
+        total = int((cur.fetchone() or {}).get("total") or 0)
+        cur.execute(
+            """
+            SELECT id, user_type, identifier, display_name, email, ip_address, user_agent, created_at
+            FROM login_history
+            ORDER BY created_at DESC, id DESC
+            LIMIT %s OFFSET %s
+            """,
+            (page_size, offset),
+        )
+        rows = cur.fetchall() or []
+    finally:
+        cur.close()
+        db.close()
+
+    return render_template(
+        "admin_login_history.html",
+        scope=scope,
+        rows=rows,
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_next=(offset + page_size) < total,
+        has_prev=page > 1,
+    )
+
+
 if __name__ == "__main__":
     app.run(debug=True)

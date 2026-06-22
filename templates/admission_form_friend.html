@@ -56,7 +56,12 @@
           <option>Automobile Engineering</option>
         </select>
 
-        <input type="password" name="password" class="preserve-case" placeholder="Create Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
+        <div class="password-wrapper">
+          <input type="password" id="admission_friend_password" name="password" class="preserve-case" placeholder="Create Password" required autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
+          <button type="button" class="toggle-password" onclick="togglePassword('admission_friend_password', this)" aria-label="Show password" title="Show password">
+            <span aria-hidden="true">&#128065;</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -119,5 +124,6 @@
   <a href="/home" class="link">⬅ Back to Home</a>
 </div>
 
+  <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 </body>
 </html>

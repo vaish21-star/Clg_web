@@ -26,12 +26,23 @@
         <option value="Staff">Staff</option>
       </select>
       <input type="email" name="email" placeholder="Gmail (example@gmail.com)" required>
-      <input type="password" name="password" placeholder="Password" required>
-      <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+      <div class="password-wrapper">
+        <input type="password" id="staff_friend_register_password" name="password" placeholder="Password" required>
+        <button type="button" class="toggle-password" onclick="togglePassword('staff_friend_register_password', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
+      <div class="password-wrapper">
+        <input type="password" id="staff_friend_register_confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+        <button type="button" class="toggle-password" onclick="togglePassword('staff_friend_register_confirm_password', this)" aria-label="Show password" title="Show password">
+          <span aria-hidden="true">&#128065;</span>
+        </button>
+      </div>
       <button type="submit">Send OTP</button>
     </form>
     <a class="link" href="/login/staff">Back to Login</a>
   </div>
+  <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 </body>
 </html>
 
